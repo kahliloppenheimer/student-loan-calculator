@@ -1,9 +1,11 @@
 $(document).ready(function(){
     answers = {};
     $questions = $('.form-group');
+    $results = $('#results');
     totalQuestions = $questions.size();
     currQuestion = 0;
     $questions.hide();
+    $results.hide();
     $($questions.get(currQuestion)).fadeIn();
     addAnswerListener();
     addNextPrevListeners();
@@ -71,7 +73,11 @@ function addAnswerListener() {
         answers[question] = answer;
         $($questions.get(currQuestion)).fadeOut(function() {
             currQuestion = getNextQuestion(currQuestion);
-            $($questions.get(currQuestion)).fadeIn();
+            if (currQuestion < totalQuestions) {
+                $($questions.get(currQuestion)).fadeIn();
+            } else {
+                $results.fadeIn();
+            }
         });
     });
 }
