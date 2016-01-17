@@ -24,7 +24,7 @@ input[type="text"] {
 
 .form-group {
     text-align: center;
-    background-color: rgba(86,61,124,.3);
+    background-color: rgba(86,61,124,.4);
     color: white;
     padding-top: 30px;
     padding-bottom: 30px;
@@ -51,27 +51,27 @@ input[type="text"] {
 
 .nextPrev a {
     width: 78px;
-    background-color: rgba(86,61,124,.3);
-    border-color: rgba(86,61,124,.3);
+    background-color: rgba(86,61,124,.4);
+    border-color: rgba(86,61,124,.4);
     color: white;
 }
 
 .nextPrev a:hover {
-    background-color: rgba(86,61,124,.3);
+    background-color: rgba(86,61,124,.4);
     border-color: white;
 }
 
 .nextPrev a:active {
-    background-color: rgba(86,61,124,.3);
+    background-color: rgba(86,61,124,.4);
 }
 
 .nextPrev a:link {
-    background-color: rgba(86,61,124,.3);
+    background-color: rgba(86,61,124,.4);
     color:white;
 }
 
 .nextPrev a:target {
-    background-color: rgba(86,61,124,.3);
+    background-color: rgba(86,61,124,.4);
 }
 
 
