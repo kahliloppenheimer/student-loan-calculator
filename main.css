@@ -1,7 +1,6 @@
 form {
-    padding: 100px;
-    padding-bottom: 0px;
-    padding-top: 0px;
+    padding-left: 15px;
+    padding-right: 15px;
 }
 
 h3 {
@@ -18,6 +17,10 @@ input[type="text"] {
     color: black;
 }
 
+#formRow {
+    padding-bottom: 0px;
+}
+
 .header {
     text-align: center;
 }
@@ -27,50 +30,42 @@ input[type="text"] {
     background-color: rgba(86,61,124,.4);
     color: white;
     padding-top: 30px;
-    padding-bottom: 30px;
-    width: inherit;
+    width: 100%;
+    height: 100%;
+    margin: 0;
 }
 
 /* next button styling */
 /* prev button styling */
-.prev {
-    text-align: left;
-}
 
-.next {
-    text-align: right;
-}
-
-.nextPrev {
-    text-align: center;
-    width: inherit;
-    /*padding-left: 120px;*/
-    /*padding-right: 120px;*/
-    padding-top: 30px;
-}
-
-.nextPrev a {
-    width: 78px;
+.prevNext {
+    padding-top: 0px;
     background-color: rgba(86,61,124,.4);
-    border-color: rgba(86,61,124,.4);
+    width: 1140px;
+    margin: auto;
+}
+
+.prevNext a {
+    background-color: transparent;
+    border-color: transparent;
     color: white;
 }
 
-.nextPrev a:hover {
+.prevNext a:hover {
     background-color: rgba(86,61,124,.4);
     border-color: white;
 }
 
-.nextPrev a:active {
-    background-color: rgba(86,61,124,.4);
+.prevNext a:active {
+    background-color: transparent;
 }
 
-.nextPrev a:link {
-    background-color: rgba(86,61,124,.4);
+.prevNext a:link {
+    background-color: transparent;
     color:white;
 }
 
-.nextPrev a:target {
+.prevNext a:target {
     background-color: rgba(86,61,124,.4);
 }
 

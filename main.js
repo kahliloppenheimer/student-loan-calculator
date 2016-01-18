@@ -2,13 +2,14 @@ $(document).ready(function(){
     answers = {};
     $questions = $('.form-group');
     $results = $('#results');
+    $prevNext = $('.prevNext');
     totalQuestions = $questions.size();
     currQuestion = 0;
     $questions.hide();
     $results.hide();
     $($questions.get(currQuestion)).fadeIn();
     addAnswerListener();
-    addNextPrevListeners();
+    addprevNextListeners();
 });
 
 // Returns the next question based on the current question number
@@ -76,14 +77,20 @@ function addAnswerListener() {
             if (currQuestion < totalQuestions) {
                 $($questions.get(currQuestion)).fadeIn();
             } else {
-                $results.fadeIn();
+                showResults();
             }
         });
     });
 }
 
+function showResults() {
+    $prevNext.fadeOut(function() {
+        $results.fadeIn();
+    });
+}
+
 // Adds listeners for the next/prev buttons
-function addNextPrevListeners() {
+function addprevNextListeners() {
     // Locks next button while transitioning
     transitionLock = true;
     // Make sure next button only works if they have selected an option

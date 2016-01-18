@@ -16,12 +16,12 @@
     <div class="jumbotron">
       <h1 class="header">Student Loan Calculator</h1>
       <p class="header"> <em>Save money now! </em></p>
+      <h1 id="results">Results<br>Results<br>Results</h1>
     </div>
-    <div class="row">
+    <div class="row" id="formRow">
       <form role="form" id="mainForm">
         <div class="form-group" id="q1">
           <h3>Are you currently enrolled in school?</h3>
-          <br>
           <input type="radio" name="decision" value="Yes"> Yes
           <input type= "radio" name="decision" value="No"> No
         </div>
@@ -137,16 +137,14 @@
           <input type= "radio" name="backToSchool" value="No"> No
           <input type= "radio" name="backToSchool" value="I do not know"> I do not know <br>
         </div>
-
-        <div id="results">
-          <h1> RESULTS </h1>
-        </div>
       </form>
     </div>
     <div class="row">
-      <div class="nextPrev text-center btn-group btn-group-justified">
-        <a href="#" id="prev" class="btn btn-primary bottomButton">Previous</a>
-        <a href="#" id="next" class="btn btn-primary bottomButton">Next</a>
+      <div class="prevNext text-center btn-group btn-group-justified">
+        <!-- <a href="#" id="prev" class="btn btn-primary bottomButton">Previous</a> -->
+        <!-- <a href="#" id="next" class="btn btn-primary bottomButton">Next</a> -->
+        <a href="#" id="prev" class="btn btn-primary glyphicon glyphicon-chevron-left"></a>
+        <a href="#" id="next" class="btn btn-primary glyphicon glyphicon-chevron-right"></a>
       </div>
     </div>
   </div>
