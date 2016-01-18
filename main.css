@@ -41,8 +41,7 @@ input[type="text"] {
 .prevNext {
     padding-top: 0px;
     background-color: rgba(86,61,124,.4);
-    width: 1140px;
-    margin: auto;
+    overflow: hidden;
 }
 
 .prevNext a {
