@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="main.css">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/js/bootstrap.min.js"></script>
+  <script src="calculator.js"></script>
   <script src="main.js"></script>
 </head>
 
@@ -16,7 +17,14 @@
     <div class="jumbotron">
       <h1 class="header">Student Loan Calculator</h1>
       <p class="header"> <em>Save money now! </em></p>
-      <h1 id="results">Results<br>Results<br>Results</h1>
+      <div id="results">
+        <table id="resultsTable" class="table table-striped table-hover">
+          <thead>
+          </thead>
+          <tbody>
+          </tbody>
+      </table>
+      </div>
     </div>
     <div class="row" id="formRow">
       <form role="form" id="mainForm">
@@ -41,102 +49,121 @@
         </div>
 
         <div class= "form-group" id="q4">
+          <h3>In which part of the United States do you live?</h3>
+          <input type= "radio" name="hawaiiOrAlaska" value="Alaska"> Alaska
+          <input type= "radio" name="hawaiiOrAlaska" value="Hawaii"> Hawaii
+          <input type= "radio" name="hawaiiOrAlaska" value="Continental US (any of the other 48 states)"> Continental US (any of the other 48 states) <br>
+        </div>
+
+        <div class= "form-group" id="q5">
           <h3>Are you currently employed?</h3>
           <input type="radio" name="employed" value="Yes"> Yes
           <input type= "radio" name="employed" value="No"> No <br>
         </div>
 
-        <div class= "form-group" id="q5">
+        <div class= "form-group" id="q6">
           <h3>Are you a teacher?</h3>
           <input type="radio" name="teacher" value="Yes"> Yes
           <input type= "radio" name="teacher" value="No"> No <br>
         </div>
 
-        <div class= "form-group" id="q6">
+        <div class= "form-group" id="q7">
           <h3>Do you work for a government agency or nonprofit?</h3>
           <input type="radio" name= "work" value="Yes"> Yes
           <input type= "radio" name= "work" value="No"> No
           <input type= "radio" name= "work" value="I do not know"> I do not know <br>
         </div>
 
-        <div class= "form-group" id="q7">
+        <div class= "form-group" id="q8">
           <h3>Are you disabled and currently collect disability benefits?</h3>
           <input type="radio" name="disability" value="Yes"> Yes
           <input type= "radio" name="disability" value="No"> No <br>
         </div>
 
-        <div class= "form-group" id="q8">
+        <div class= "form-group" id="q9">
           <h3>Are you single or married?</h3>
           <input type="radio" name="relationship" value="Single"> Single
           <input type= "radio" name="relationship" value="Married"> Married <br>
         </div>
 
-        <div class= "form-group" id="q9">
+        <div class= "form-group" id="q10">
           <h3>Do you and your spouse file taxes jointly or separate?</h3>
           <input type="radio" name="filingTaxes" value="Jointly"> Jointly
           <input type= "radio" name="filingTaxes" value="Separate"> Separate
           <input type= "radio" name="filingTaxes" value="I do not know"> I do not know <br>
         </div>
 
-        <div class= "form-group" id="q10">
+        <div class= "form-group" id="q11">
           <h3>Does your spouse have student loan debt?</h3>
           <input type="radio" name="spouseLoans" value="Yes"> Yes
           <input type= "radio" name="spouseLoans" value="No"> No
           <input type= "radio" name="spouseLoans" value="I do not know"> I do not know <br>
         </div>
 
-        <div class= "form-group" id="q11">
+        <div class= "form-group" id="q12">
           <h3>How much debt (Estimated)?</h3>
           <input type="text" name="debt" <br>
         </div>
 
-        <div class= "form-group" id="q12">
+        <div class= "form-group" id="q13">
           <h3>What is your family size including yourself that you claim on your taxes?</h3>
           <input type="text" name="familySize">
-          <input type="radio" name="familySize" value="I do not know"> I do not know <br>
         </div>
 
-        <div class= "form-group" id="q13">
+        <div class= "form-group" id="q14">
           <h3>What is your estimated Annual Gross Income (AGI)?</h3>
           <input type="text" name="AGI"> <br>
         </div>
 
-        <div class= "form-group" id="q14">
-          <h3>What is the estimated outstanding balance of your loans?</h3>
-          <input type="text" name="balance">
-          <input type="radio" name="balance" value="I do not know"> I do not know <br>
+        <div class= "form-group" id="q15">
+          <h3>How much do you earn on your slowest month (i.e. the month in which you earn the least)?</h3>
+          <input type="text" name="slowestMonth"> <br>
         </div>
 
+        <div class= "form-group" id="q16">
+          <h3>What is the estimated outstanding balance of your loans?</h3>
+          <input type="text" name="balance">
+        </div>
 
-        <div class= "form-group" id="q15">
+        <div class= "form-group" id="q17">
+          <h3>What is the estimated interest rate on the loans?</h3>
+          <input type="text" name="balance">
+        </div>
+
+        <div class= "form-group" id="q18">
+          <h3>What is your currently monthly payment on your loans?</h3>
+          <input type="text" name="monthlyPayment">
+        </div>
+
+        <div class= "form-group" id="q19">
           <h3>What is the current status of your loan?</h3>
           <input type="radio" name="currentStatus" value="Current"> Current
           <input type= "radio" name="currentStatus" value="Deferment"> Deferment
           <input type= "radio" name="currentStatus" value="Forbearance"> Forbearance
           <input type= "radio" name="currentStatus" value="Default (longer than 270 days since last payment"> Default <br>
-
         </div>
 
-        <div class= "form-group" id="q16">
+        <div class= "form-group" id="q20">
           <h3>Are you currently being garnished (governmental ceasing of money due to debt)?</h3>
           <input type="radio" name="garnished" value="Yes"> Yes
           <input type= "radio" name="garnished" value="No"> No
           <input type= "radio" name="garnished" value="I do not know"> I do not know <br>
         </div>
 
-        <div class= "form-group" id="q17">
+        <div class= "form-group" id="q21">
           <h3>Do you know your FSA ID?</h3>
           <input type="radio" name="FSA" value="Yes"> Yes
           <input type= "radio" name="FSA" value="No"> No
           <input type= "radio" name="FSA" value="I do not know"> I do not know <br>
         </div>
 
-        <div class= "form-group" id="q18">
+        <div class= "form-group" id="q22">
           <h3>Do you plan go back to school in the next 6 months?</h3>
           <input type= "radio" name="backToSchool" value="Yes"> Yes
           <input type= "radio" name="backToSchool" value="No"> No
           <input type= "radio" name="backToSchool" value="I do not know"> I do not know <br>
         </div>
+
       </form>
     </div>
     <div class="row" style="padding-left: 15px; padding-right: 15px;">

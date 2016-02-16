@@ -18,24 +18,24 @@ function getNextQuestion() {
     var qNum = currQuestion + 1;
     var nextQ = qNum + 1;
     // Question skipping logic
-    if (qNum == 4 && answers['q4'].toLowerCase().charAt(0) === 'n') {
-        nextQ = 7;
-    } else if (qNum == 5 && answers['q5'].toLowerCase().charAt(0) === 'y') {
-        nextQ = 7;
-    } else if (qNum == 7 && answers['q7'].toLowerCase().charAt(0) === 'y') {
+    if (qNum == 5 && answers['q5'].toLowerCase().charAt(0) === 'n') {
+        nextQ = 8;
+    } else if (qNum == 6 && answers['q6'].toLowerCase().charAt(0) === 'y') {
+        nextQ = 8;
+    } else if (qNum == 8 && answers['q8'].toLowerCase().charAt(0) === 'y') {
         if (answers['q1'].toLowerCase().charAt(0) === 'n') {
-            nextQ = 18;
+            nextQ = 20;
         } else {
-            nextQ = 19;
+            nextQ = 21;
         }
-    } else if (qNum == 8 && answers['q8'].toLowerCase().charAt(0) === 's') {
-        nextQ = 12;
-    } else if (qNum == 10 && answers['q10'].toLowerCase().charAt(0) === 'n') {
-        nextQ = 12;
-    } else if (qNum == 15 && answers['q15'].toLowerCase().indexOf('default') < 0) {
-        nextQ = 17;
-    } else if (qNum == 17 && answers['q1'].toLowerCase().charAt(0) === 'y') {
-        nextQ = 19;
+    } else if (qNum == 9 && answers['q9'].toLowerCase().charAt(0) === 's') {
+        nextQ = 13;
+    } else if (qNum == 11 && answers['q11'].toLowerCase().charAt(0) === 'n') {
+        nextQ = 13;
+    } else if (qNum == 19 && answers['q19'].toLowerCase().indexOf('default') < 0) {
+        nextQ = 21;
+    } else if (qNum == 21 && answers['q1'].toLowerCase().charAt(0) === 'y') {
+        nextQ = 23;
     }
     return nextQ - 1;
 }
@@ -46,22 +46,22 @@ function getPrevQuestion() {
     var qNum = currQuestion + 1;
     var nextQ = qNum - 1;
     // Question skipping logic
-    if (qNum == 7 && answers['q4'].toLowerCase().charAt(0) === 'n') {
-        nextQ = 4;
-    } else if (qNum == 7 && answers['q5'].toLowerCase().charAt(0) === 'y') {
+    if (qNum == 8 && answers['q5'].toLowerCase().charAt(0) === 'n') {
         nextQ = 5;
-    } else if (qNum == 18 && answers['q7'].toLowerCase().charAt(0) === 'y') {
+    } else if (qNum == 8 && answers['q6'].toLowerCase().charAt(0) === 'y') {
+        nextQ = 6;
+    } else if (qNum == 21 && answers['q8'].toLowerCase().charAt(0) === 'y') {
         if (answers['q1'].toLowerCase().charAt(0) === 'n') {
-            nextQ = 7;
+            nextQ = 8;
         }
-    } else if (qNum == 12 && answers['q8'].toLowerCase().charAt(0) === 's') {
-        nextQ = 8;
-    } else if (qNum == 12 && answers['q10'].toLowerCase().charAt(0) === 'n') {
-        nextQ = 10;
-    } else if (qNum == 17 && answers['q15'].toLowerCase().indexOf('default') < 0) {
-        nextQ = 15;
-    } else if (qNum == 19 && answers['q1'].toLowerCase().charAt(0) === 'y') {
-        nextQ = 17;
+    } else if (qNum == 13 && answers['q9'].toLowerCase().charAt(0) === 's') {
+        nextQ = 9;
+    } else if (qNum == 13 && answers['q11'].toLowerCase().charAt(0) === 'n') {
+        nextQ = 11;
+    } else if (qNum == 21 && answers['q19'].toLowerCase().indexOf('default') < 0) {
+        nextQ = 19;
+    } else if (qNum == 23 && answers['q1'].toLowerCase().charAt(0) === 'y') {
+        nextQ = 21;
     }
     return nextQ - 1;
 }
@@ -69,6 +69,7 @@ function getPrevQuestion() {
 // Adds listeners to all input elements to update answers as they change
 function addAnswerListener() {
     $('input').change(function(){
+        transitionLock = false;
         var answer = ($(this).val());
         var question = ($(this).parent().attr('id'));
         answers[question] = answer;
@@ -79,14 +80,52 @@ function addAnswerListener() {
             } else {
                 showResults();
             }
+            transitionLock = true;
         });
     });
 }
 
 function showResults() {
+    var calc = new Calculator({'q4': 'Alaska', 'q12': '$30,000', 'q13': '2', 'q14': '45,616.73', 'q16': '$20,000.53', 'q17': '5.00%', 'q18': '$513.001'});
+    var results = [
+                    ['Payment plan', 'Monthly payment', 'Savings'],
+                    ['Current', calc.getCurrentMonthlyPayment(), 0],
+                    ['RePAYE', calc.getRepayePayment(), calc.getCurrentMonthlyPayment() - calc.getRepayePayment()],
+                    ['PAYE', calc.getPayePayment(), calc.getCurrentMonthlyPayment() - calc.getPayePayment()],
+                    ['IBR', calc.getIbrPayment(), calc.getCurrentMonthlyPayment() - calc.getIbrPayment()]
+                ];
+    makeTable('resultsTable', results);
+
     $prevNext.fadeOut(function() {
         $results.fadeIn();
     });
+}
+
+// Takes in the id of an html table element and a 2d array of data
+// to fill the table in with. Assumes the first row of data should be
+// headers and that the table element is currently empty (no th, tr, or td elems),
+// but has thead and tbody elems
+function makeTable(id, data) {
+    // Ignore empty tables
+    if (results.length <= 0) {
+        return;
+    }
+    // Fill in header row
+    var nextRow = '<tr>';
+    for (var i = 0; i < data[0].length; ++i) {
+        nextRow += '<th>' + data[0][i] + '</th>';
+    }
+    nextRow += '</tr>';
+    $('#resultsTable > thead').append(nextRow);
+    // Fill in rest of table
+    for (var i = 1; i < data.length; ++i) {
+        nextRow = '<tr>';
+        for (var j = 0; j < data[i].length; ++j) {
+            nextRow += '<td>' + data[i][j] + '</td>';
+        }
+        nextRow += '</tr>';
+        $('#resultsTable > tbody:last-child').append(nextRow);
+    }
 }
 
 // Adds listeners for the next/prev buttons
