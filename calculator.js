@@ -149,8 +149,7 @@ function initialTests() {
         calc.getSpouseIncome() == 30000 &&
         calc.getFamilySize() == 2 &&
         calc.getAgi() == 45616.73 &&
-        Math.abs(calc.getTotalHouseholdIncome() - 75616.73) < 0.001 &&
-        Math.abs(calc.getIbrPayment() - 571.709) < 0.001;
+        Math.abs(calc.getTotalHouseholdIncome() - 75616.73) < 0.001;
 }
 
 // Runs a single income test
