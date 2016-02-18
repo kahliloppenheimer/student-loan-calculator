@@ -9,6 +9,8 @@ $(document).ready(function(){
     $results.hide();
     $($questions.get(currQuestion)).fadeIn();
     addAnswerListener();
+    addSelectChangeListener();
+    addChangeOnEnter();
     addprevNextListeners();
 });
 
@@ -66,23 +68,84 @@ function getPrevQuestion() {
     return nextQ - 1;
 }
 
-// Adds listeners to all input elements to update answers as they change
+// Adds listeners to all input elements to update answers as the values change.
+// Will also transition question if it is a radio button or select element.
 function addAnswerListener() {
     $('input').change(function(){
-        transitionLock = false;
         var answer = ($(this).val());
         var question = ($(this).parent().attr('id'));
         answers[question] = answer;
-        $($questions.get(currQuestion)).fadeOut(function() {
-            currQuestion = getNextQuestion(currQuestion);
-            if (currQuestion < totalQuestions) {
-                $($questions.get(currQuestion)).fadeIn();
-            } else {
-                showResults();
-            }
-            transitionLock = true;
-        });
+        var inputType = getCurrQuestionType();
+        if(inputType == 'radio') {
+            console.log('radio change listener');
+            transitionNext();
+        }
     });
+}
+
+// Adds listener for changed select value to update answers and transition question
+function addSelectChangeListener() {
+    $('select').change(function() {
+        var answer = ($(this).val());
+        var question = ($(this).parent().attr('id'));
+        answers[question] = answer;
+        var inputType = getCurrQuestionType();
+        console.log('select change listener');
+        transitionNext();
+    });
+}
+
+// Adds listeners that will transition to next question when user presses the
+// enter key
+function addChangeOnEnter() {
+    $(document).keypress(function(e) {
+        if(e.which == 13) {
+            console.log('enter listener');
+            transitionNext();
+            e.preventDefault();
+            return false;
+        }
+    });
+}
+
+// Transitions to the next question or to the results page if no questions
+// are left
+function transitionNext() {
+    if (transitionLock) {
+        transitionLock = false;
+        // False unless either a radio button is checked or a text box is filled in
+        var canAdvance = false;
+        // Handle the question that has a select drop down
+        canAdvance = $($questions.get(currQuestion)).find('select').length == 0  ? false : true;
+        // Handle all other kinds of questions
+        $($questions.get(currQuestion)).find('input').each(function(i, inputElem) {
+            if (inputElem.getAttribute("type") == "radio" && $(inputElem).is(':checked')
+              || (inputElem.getAttribute("type") == "text" && $(inputElem).val().length > 0)) {
+                canAdvance = true;
+            }
+        });
+        if (canAdvance) {
+            $($questions.get(currQuestion)).fadeOut({
+                complete: function(){
+                    currQuestion = getNextQuestion(currQuestion);
+                    if (currQuestion < totalQuestions) {
+                        $($questions.get(currQuestion)).fadeIn();
+                    } else {
+                        showResults();
+                    }
+                    transitionLock = true;
+                }
+            });
+        } else {
+            transitionLock = true;
+        }
+    }
+}
+
+// Returns the type of a question ('radio', 'text', or 'select') for a given
+// questionNum
+function getCurrQuestionType() {
+    return $($questions.get(currQuestion)).find('input')[0] ? $($questions.get(currQuestion)).find('input')[0].getAttribute('type') : 'select';
 }
 
 // Calculates all results and displays them on page
@@ -92,51 +155,6 @@ function showResults() {
     $prevNext.fadeOut(function() {
         $results.fadeIn();
     });
-}
-
-// Returns a table of results to display given a user's answers
-function getResults(answers) {
-    var calc = new Calculator(answers);
-    // Headers of results table
-    var results = [['Payment Plan', 'Monthly Payment ($)', 'Monthly Savings ($)', 'Total Amount Paid ($)', 'Repayment Period (months)']];
-    // Payment plan names paired with the monthly payment values
-    var plansAndPayments = [
-        ['Current', calc.getCurrentMonthlyPayment()],
-        ['Standard', calc.getStandardPayment()],
-        ['REPAYE', calc.getRepayePayment()],
-        ['PAYE', calc.getPayePayment()],
-        ['IBR', calc.getIbrPayment()]
-    ];
-    // Mapping of payment plan names to max months in repayment period
-    var plansToMaxPeriods = {
-        'Standard': 120,
-        'REPAYE': 240,
-        'PAYE': 240,
-        'IBR': 300
-    };
-    // Go through each plan and monthly payment and add row to results table
-    for (var i = 0; i < plansAndPayments.length; ++i) {
-        var plan = plansAndPayments[i][0];
-        var payment = plansAndPayments[i][1];
-        var savings = calc.getCurrentMonthlyPayment() - payment;
-        // Max period possible for the given plan
-        var maxPeriod = plansToMaxPeriods[plan]
-        // Period required if the payments were to pay off the entire balance
-        var fullPeriod = calc.getPeriodForMonthlyPayment(payment);
-        // Take min of the two of the maxPeriod exists
-        var period = maxPeriod ? Math.min(maxPeriod, fullPeriod) : fullPeriod
-        nextPlan = [plan, fmtAsMoney(payment), fmtAsMoney(savings), fmtAsMoney(payment * period), period];
-        results.push(nextPlan);
-    }
-    return results;
-}
-
-// Formats the given number as money (i.e. rounds to the hundreths place)
-function fmtAsMoney(val) {
-    if (val < 0) {
-        return '-';
-    }
-    return val.toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
 }
 
 // Takes in the id of an html table element and a 2d array of data
@@ -173,31 +191,13 @@ function addprevNextListeners() {
     // Make sure next button only works if they have selected an option
     // and if they are not on the last question
     $('#next').click(function() {
-        if (transitionLock) {
-            transitionLock = false;
-            // False unless either a radio button is checked or a text box is filled in
-            var canAdvance = false;
-            $($questions.get(currQuestion)).find('input').each(function(i, inputElem) {
-                if (inputElem.getAttribute("type") == "radio" && $(inputElem).is(':checked')
-                || (inputElem.getAttribute("type") == "text" && $(inputElem).val().length > 0)) {
-                    canAdvance = true;
-                }
-            });
-            if (canAdvance && currQuestion < totalQuestions - 1) {
-                $($questions.get(currQuestion)).fadeOut(function(){
-                    currQuestion = getNextQuestion(currQuestion);
-                    $($questions.get(currQuestion)).fadeIn();
-                    transitionLock = true;
-                });
-            } else {
-                transitionLock = true;
-            }
-        }
-        return false;
+        console.log('next listener');
+        transitionNext();
     });
 
     // Make sure previous only works if they are not on the first question
     $('#prev').click(function(){
+        console.log('prev listener');
         if (transitionLock) {
             transitionLock = false;
             if (currQuestion > 0) {

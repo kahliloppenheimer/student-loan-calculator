@@ -18,7 +18,7 @@ var Calculator = function(answers) {
 Calculator.prototype.getPovertyLine = function() {
     var povLines = {
         // Alaska
-        'a': {
+        'ak': {
             1: 14720,
             2: 19920,
             3: 25120,
@@ -27,7 +27,7 @@ Calculator.prototype.getPovertyLine = function() {
             6: 40720
         },
         // Hawaii
-        'h': {
+        'hi': {
             1: 13550,
             2: 18330,
             3: 23110,
@@ -36,7 +36,7 @@ Calculator.prototype.getPovertyLine = function() {
             6: 37450
         },
         // Continental US
-        'c': {
+        'continental': {
             1: 11770,
             2: 15930,
             3: 20090,
@@ -45,11 +45,15 @@ Calculator.prototype.getPovertyLine = function() {
             6: 32570
         }
     }
-    var state = this.answers['q4'].toLowerCase().trim();
-    if (state.substring(0, 4) != "alas" && state.substring(0, 4) != "hawa") {
-        state = "c";
+    // default to continental for the case of non-filled state
+    var state = 'continental';
+    if (this.answers['q4']) {
+        var state = this.answers['q4'].toLowerCase().trim();
     }
-    return povLines[state.charAt(0)][this.getFamilySize()];
+    if (state != 'ak' && state != 'hi') {
+        state = 'continental';
+    }
+    return povLines[state][this.getFamilySize()];
 }
 
 // Returns principle balance of client's current loans
@@ -107,14 +111,20 @@ Calculator.prototype.hasPartialFinancialHardship = function() {
     return this.getStandardPayment() * 12 > 0.15 * this.getDiscretionaryIncome();
 }
 
-
-
 // Calculation used from http://www.javascriptkit.com/script/cut155.shtml
 Calculator.prototype.getStandardPayment = function() {
-    var princ = this.getPrincipleBalance();
-    var term = 120;
-    var intr = this.getInterestRate() / 1200;
-    return princ * intr / (1 - (Math.pow(1/(1 + intr), term)));
+    // var princ = this.getPrincipleBalance();
+    // var term = 120;
+    // var intr = this.getInterestRate() / 1200;
+    // return princ * intr / (1 - (Math.pow(1/(1 + intr), term)));
+    return valueOfLoanAfterDuration(this.getPrincipleBalance(), this.getInterestRate(), 120) / 120;
+}
+
+// Computes the value a loan will with principle p and interest rate r will
+// appreciate to after n months
+function valueOfLoanAfterDuration(p, r, n) {
+    r /= 1200;
+    return p * r / (1 - (Math.pow(1/(1 + r), n))) * n;
 }
 
 /**
@@ -138,12 +148,94 @@ Calculator.prototype.getIbrPayment = function() {
 // of months. Taken from:
 // http://www.had2know.com/finance/how-long-pay-off-loan.html
 function getPeriod(p, r, m) {
+    // Convert percentages to decimal
+    if (r > 1) {
+        r /= 100;
+    }
+    // Return infinity for non-positive monthly payments
+    if (m <= 0) {
+        return Number.MAX_VALUE;
+    }
     return Math.ceil((Math.log(m) - Math.log(m - p * r / 12)) / Math.log(1 + r / 12));
 }
 
 // Gets period for loan assuming this calculator's principle balance and interest
 Calculator.prototype.getPeriodForMonthlyPayment = function(p) {
     return getPeriod(this.getPrincipleBalance(), this.getInterestRate(), p);
+}
+
+// Returns a table of results to display given a user's answers
+getResults = function(answers) {
+    var calc = new Calculator(answers);
+    // Headers of results table
+    var results = [['Payment Plan', 'Monthly Payment ($)', 'Monthly Savings ($)', 'Total Amount Paid ($)', 'Projected Loan Forgiveness ($)', 'Repayment Period (months)']];
+    // Payment plan names paired with the monthly payment values
+    var plansAndPayments = [
+        ['Current', calc.getCurrentMonthlyPayment()],
+        ['Standard', calc.getStandardPayment()],
+        ['REPAYE', calc.getRepayePayment()],
+        ['PAYE', calc.getPayePayment()],
+        ['IBR', calc.getIbrPayment()]
+    ];
+    // Mapping of payment plan names to max months in repayment period
+    var plansToMaxPeriods = {
+        'Standard': 120,
+        'REPAYE': 300,
+        'PAYE': 240,
+        'IBR': 300
+    };
+    // Go through each plan and monthly payment and add row to results table
+    for (var i = 0; i < plansAndPayments.length; ++i) {
+        var plan = plansAndPayments[i][0];
+        var payment = plansAndPayments[i][1];
+        var savings = calc.getCurrentMonthlyPayment() - payment;
+        // Max period possible for the given plan
+        var maxPeriod = plansToMaxPeriods[plan]
+        // Period required if the payments were to pay off the entire balance
+        var fullPeriod = calc.getPeriodForMonthlyPayment(payment);
+        // Take min of the two of the maxPeriod exists
+        var period = maxPeriod ? Math.min(maxPeriod, fullPeriod) : fullPeriod
+        // Projected forigveness is full amount that would be paid minus the amount that is paid
+        var forgiveness = valueOfLoanAfterDuration(calc.getPrincipleBalance(), calc.getInterestRate(), period) - payment * period;
+        // Functions to format negative values for forgiveness dollar amounts and
+        // all other dollar amounts
+        var fun = function(b){return '(' + b + ')';};
+        var forgivenessFun = function(b){return '0.00';};
+        var nextPlan;
+        if (payment >= 0) {
+            nextPlan = [
+                plan,
+                fmtAsMoney(payment, fun),
+                fmtAsMoney(savings, fun),
+                fmtAsMoney(payment * period, fun),
+                fmtAsMoney(forgiveness, forgivenessFun),
+                period
+            ];
+        } else {
+            nextPlan = [
+                plan + ' (ineligable)',
+                '-',
+                '-',
+                '-',
+                '-',
+                '-'
+            ];
+        }
+        results.push(nextPlan);
+    }
+    return results;
+}
+
+// Formats the given number as money (i.e. rounds to the hundreths place)
+// second argument is a function that will take the string of a negative
+// dollar amount and format it as desired (i.e. $18.32 -> ($18.32), or $18.32 -> -)
+function fmtAsMoney(val, negConversion) {
+    var str = Math.abs(val).toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
+    if (val < 0) {
+        return negConversion(str);
+    } else {
+        return str;
+    }
 }
 
 // Removes all non-numeric characters and parses a float from the string
@@ -155,7 +247,7 @@ function extractNum(str) {
 
 // Runs some very basic initial tests to make sure getters/setters work
 function initialTests() {
-    var calc = new Calculator({'q4': 'Alaska', 'q12': '$30,000', 'q13': '2', 'q14': '45,616.73', 'q16': '$20,000.53', 'q17': '5.00%', 'q18': '$513.001'});
+    var calc = new Calculator({'q4': 'AK', 'q12': '$30,000', 'q13': '2', 'q14': '45,616.73', 'q16': '$20,000.53', 'q17': '5.00%', 'q18': '$513.001'});
     return calc.getPrincipleBalance() == 20000.53 &&
         calc.getCurrentMonthlyPayment() == 513.001 &&
         calc.getCurrentAnnualPayment() == 513.001 * 12 &&
