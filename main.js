@@ -85,20 +85,58 @@ function addAnswerListener() {
     });
 }
 
+// Calculates all results and displays them on page
 function showResults() {
-    var calc = new Calculator({'q4': 'Alaska', 'q12': '$30,000', 'q13': '2', 'q14': '45,616.73', 'q16': '$20,000.53', 'q17': '5.00%', 'q18': '$513.001'});
-    var results = [
-                    ['Payment plan', 'Monthly payment', 'Savings'],
-                    ['Current', calc.getCurrentMonthlyPayment(), 0],
-                    ['RePAYE', calc.getRepayePayment(), calc.getCurrentMonthlyPayment() - calc.getRepayePayment()],
-                    ['PAYE', calc.getPayePayment(), calc.getCurrentMonthlyPayment() - calc.getPayePayment()],
-                    ['IBR', calc.getIbrPayment(), calc.getCurrentMonthlyPayment() - calc.getIbrPayment()]
-                ];
+    var results = getResults(answers);
     makeTable('resultsTable', results);
-
     $prevNext.fadeOut(function() {
         $results.fadeIn();
     });
+}
+
+// Returns a table of results to display given a user's answers
+function getResults(answers) {
+    var calc = new Calculator(answers);
+    // Headers of results table
+    var results = [['Payment Plan', 'Monthly Payment ($)', 'Monthly Savings ($)', 'Total Amount Paid ($)', 'Repayment Period (months)']];
+    // Payment plan names paired with the monthly payment values
+    var plansAndPayments = [
+        ['Current', calc.getCurrentMonthlyPayment()],
+        ['Standard', calc.getStandardPayment()],
+        ['REPAYE', calc.getRepayePayment()],
+        ['PAYE', calc.getPayePayment()],
+        ['IBR', calc.getIbrPayment()]
+    ];
+    // Mapping of payment plan names to max months in repayment period
+    var plansToMaxPeriods = {
+        'Standard': 120,
+        'REPAYE': 240,
+        'PAYE': 240,
+        'IBR': 300
+    };
+    // Go through each plan and monthly payment and add row to results table
+    for (var i = 0; i < plansAndPayments.length; ++i) {
+        var plan = plansAndPayments[i][0];
+        var payment = plansAndPayments[i][1];
+        var savings = calc.getCurrentMonthlyPayment() - payment;
+        // Max period possible for the given plan
+        var maxPeriod = plansToMaxPeriods[plan]
+        // Period required if the payments were to pay off the entire balance
+        var fullPeriod = calc.getPeriodForMonthlyPayment(payment);
+        // Take min of the two of the maxPeriod exists
+        var period = maxPeriod ? Math.min(maxPeriod, fullPeriod) : fullPeriod
+        nextPlan = [plan, fmtAsMoney(payment), fmtAsMoney(savings), fmtAsMoney(payment * period), period];
+        results.push(nextPlan);
+    }
+    return results;
+}
+
+// Formats the given number as money (i.e. rounds to the hundreths place)
+function fmtAsMoney(val) {
+    if (val < 0) {
+        return '-';
+    }
+    return val.toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
 }
 
 // Takes in the id of an html table element and a 2d array of data

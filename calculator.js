@@ -132,6 +132,20 @@ Calculator.prototype.getIbrPayment = function() {
     return this.hasPartialFinancialHardship() ?  0.15 * this.getDiscretionaryIncome() / 12 : -1;
 }
 
+// Takes in the principle balance p, the interest rate r, and the monthly payment m
+// and returns the number of months required to pay off the loan. Notably, this will
+// give an upper-bound estimate (i.e. the ceiling) of the true value of the number
+// of months. Taken from:
+// http://www.had2know.com/finance/how-long-pay-off-loan.html
+function getPeriod(p, r, m) {
+    return Math.ceil((Math.log(m) - Math.log(m - p * r / 12)) / Math.log(1 + r / 12));
+}
+
+// Gets period for loan assuming this calculator's principle balance and interest
+Calculator.prototype.getPeriodForMonthlyPayment = function(p) {
+    return getPeriod(this.getPrincipleBalance(), this.getInterestRate(), p);
+}
+
 // Removes all non-numeric characters and parses a float from the string
 function extractNum(str) {
     var numPattern = /[\d.]+/g;
@@ -181,6 +195,9 @@ console.log(initialTests() ? "Initial tests passed!" : "Initial tests failed!");
 var incomeTests = [
     [45000, 5, 35000, 1, 'Connecticut', 477, 145, 145, 217],
     [80000, 10, 22000, 3, 'Alaska', 1057, 0, 0, 0],
-    [20000, 5, 60000, 3, 'Colorado', 212, 249, -1, -1]
+    [20000, 5, 60000, 3, 'Colorado', 212, 249, -1, -1],
+    [35000, 5, 45000, 3, 'Delaware', 371, 124, 124, 186],
+    [20000, 5, 30000, 1, 'Alabama', 212, 103, 103, 154]
 ];
+
 runIncomeTests();
