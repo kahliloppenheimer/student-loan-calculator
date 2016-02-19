@@ -34,7 +34,11 @@ function getNextQuestion() {
         nextQ = 13;
     } else if (qNum == 11 && answers['q11'].toLowerCase().charAt(0) === 'n') {
         nextQ = 13;
-    } else if (qNum == 19 && answers['q19'].toLowerCase().indexOf('default') < 0) {
+    } else if (qNum == 18 && answers['q18'].toLowerCase().indexOf('current') >= 0) {
+        nextQ = 20;
+    } else if (qNum == 18 && answers['q18'].toLowerCase().indexOf('default') < 0) {
+        nextQ = 21;
+    } else if (qNum == 19) {
         nextQ = 21;
     } else if (qNum == 21 && answers['q1'].toLowerCase().charAt(0) === 'y') {
         nextQ = 23;
@@ -60,8 +64,12 @@ function getPrevQuestion() {
         nextQ = 9;
     } else if (qNum == 13 && answers['q11'].toLowerCase().charAt(0) === 'n') {
         nextQ = 11;
-    } else if (qNum == 21 && answers['q19'].toLowerCase().indexOf('default') < 0) {
+    } else if (qNum == 20 && answers['q18'].toLowerCase().indexOf('default') < 0) {
+        nextQ = 18;
+    } else if (qNum == 21 && answers['q18'].toLowerCase().indexOf('default') >= 0) {
         nextQ = 19;
+    } else if (qNum == 21 && answers['q18'].toLowerCase().indexOf('current') < 0) {
+        nextQ = 18;
     } else if (qNum == 23 && answers['q1'].toLowerCase().charAt(0) === 'y') {
         nextQ = 21;
     }

@@ -67,7 +67,7 @@ Calculator.prototype.getInterestRate = function() {
 
 // Returns client's current monthly payment on loan
 Calculator.prototype.getCurrentMonthlyPayment = function() {
-    return extractNum(this.answers['q18']);
+    return extractNum(this.answers['q20']);
 }
 
 // Returns client's currents annual payment on loan
@@ -247,7 +247,7 @@ function extractNum(str) {
 
 // Runs some very basic initial tests to make sure getters/setters work
 function initialTests() {
-    var calc = new Calculator({'q4': 'AK', 'q12': '$30,000', 'q13': '2', 'q14': '45,616.73', 'q16': '$20,000.53', 'q17': '5.00%', 'q18': '$513.001'});
+    var calc = new Calculator({'q4': 'AK', 'q12': '$30,000', 'q13': '2', 'q14': '45,616.73', 'q16': '$20,000.53', 'q17': '5.00%', 'q20': '$513.001'});
     return calc.getPrincipleBalance() == 20000.53 &&
         calc.getCurrentMonthlyPayment() == 513.001 &&
         calc.getCurrentAnnualPayment() == 513.001 * 12 &&
@@ -293,3 +293,25 @@ var incomeTests = [
 ];
 
 runIncomeTests();
+
+var answers = {
+    q1: "Yes",
+    q2: "Yes",
+    q3: "Yes",
+    q4: "CA",
+    q5: "Yes",
+    q6: "No",
+    q7: "No",
+    q8: "No",
+    q9: "Single",
+    q13: "2",
+    q14: "25000",
+    q15: "0",
+    q16: "45000",
+    q17: "6",
+    q18: "Current",
+    q20: "250",
+    q21: "I do not know"
+}
+
+console.log(getResults(answers));
