@@ -33,7 +33,7 @@ input[type="text"] {
     font-size: medium;
 }
 
-#select {
+.cust-select {
     background-color: transparent;
     width: 175px;
     margin: 0 auto;
