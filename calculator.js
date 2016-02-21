@@ -188,13 +188,13 @@ getResults = function(answers) {
     for (var i = 0; i < plansAndPayments.length; ++i) {
         var plan = plansAndPayments[i][0];
         var payment = plansAndPayments[i][1];
-        var savings = calc.getCurrentMonthlyPayment() - payment;
+        var savings = calc.getCurrentMonthlyPayment() && payment ? calc.getCurrentMonthlyPayment() - payment : '-';
         // Max period possible for the given plan
         var maxPeriod = plansToMaxPeriods[plan]
         // Period required if the payments were to pay off the entire balance
         var fullPeriod = calc.getPeriodForMonthlyPayment(payment);
         // Take min of the two of the maxPeriod exists
-        var period = maxPeriod ? Math.min(maxPeriod, fullPeriod) : fullPeriod
+        var period = maxPeriod ? Math.min(maxPeriod, fullPeriod) : fullPeriod;
         // Projected forigveness is full amount that would be paid minus the amount that is paid
         var forgiveness = valueOfLoanAfterDuration(calc.getPrincipleBalance(), calc.getInterestRate(), period) - payment * period;
         // Functions to format negative values for forgiveness dollar amounts and
@@ -230,6 +230,9 @@ getResults = function(answers) {
 // second argument is a function that will take the string of a negative
 // dollar amount and format it as desired (i.e. $18.32 -> ($18.32), or $18.32 -> -)
 function fmtAsMoney(val, negConversion) {
+    if (val == '-' || Number.isNaN(val)) {
+        return '-';
+    }
     var str = Math.abs(val).toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
     if (val < 0) {
         return negConversion(str);
@@ -240,6 +243,9 @@ function fmtAsMoney(val, negConversion) {
 
 // Removes all non-numeric characters and parses a float from the string
 function extractNum(str) {
+    if (!str) {
+        return '-';
+    }
     var numPattern = /[\d.]+/g;
     var numStr = str.match(numPattern).join('');
     return parseFloat(numStr);
@@ -295,23 +301,20 @@ var incomeTests = [
 runIncomeTests();
 
 var answers = {
-    q1: "Yes",
+    q1: "No",
     q2: "Yes",
     q3: "Yes",
-    q4: "CA",
-    q5: "Yes",
-    q6: "No",
-    q7: "No",
+    q5: "No",
     q8: "No",
     q9: "Single",
-    q13: "2",
-    q14: "25000",
-    q15: "0",
-    q16: "45000",
-    q17: "6",
-    q18: "Current",
-    q20: "250",
-    q21: "I do not know"
+    q13: "5",
+    q14: "15000",
+    q15: "300",
+    q16: "15000",
+    q17: "5",
+    q18: "Deferment",
+    q21: "Yes",
+    q22: "Yes"
 }
 
 console.log(getResults(answers));

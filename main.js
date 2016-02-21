@@ -26,9 +26,9 @@ function getNextQuestion() {
         nextQ = 8;
     } else if (qNum == 8 && answers['q8'].toLowerCase().charAt(0) === 'y') {
         if (answers['q1'].toLowerCase().charAt(0) === 'n') {
-            nextQ = 20;
+            nextQ = 22;
         } else {
-            nextQ = 21;
+            nextQ = 23;
         }
     } else if (qNum == 9 && answers['q9'].toLowerCase().charAt(0) === 's') {
         nextQ = 13;
@@ -56,7 +56,7 @@ function getPrevQuestion() {
         nextQ = 5;
     } else if (qNum == 8 && answers['q6'].toLowerCase().charAt(0) === 'y') {
         nextQ = 6;
-    } else if (qNum == 21 && answers['q8'].toLowerCase().charAt(0) === 'y') {
+    } else if (qNum == 22 && answers['q8'].toLowerCase().charAt(0) === 'y') {
         if (answers['q1'].toLowerCase().charAt(0) === 'n') {
             nextQ = 8;
         }
@@ -80,10 +80,12 @@ function getPrevQuestion() {
 // Will also transition question if it is a radio button or select element.
 function addAnswerListener() {
     $('input').change(function(){
+        var inputType = getCurrQuestionType(this);
         var answer = ($(this).val());
-        var question = ($(this).parent().attr('id'));
+        var question = inputType == 'radio' ? $(this).parent().parent().attr('id') : $(this).parent().attr('id');
+        console.log(inputType);
+        console.log(question);
         answers[question] = answer;
-        var inputType = getCurrQuestionType();
         if(inputType == 'radio') {
             console.log('radio change listener');
             transitionNext();
@@ -94,10 +96,9 @@ function addAnswerListener() {
 // Adds listener for changed select value to update answers and transition question
 function addSelectChangeListener() {
     $('select').change(function() {
-        var answer = ($(this).val());
-        var question = ($(this).parent().attr('id'));
+        var answer = $(this).val();
+        var question = $(this).parent().attr('id');
         answers[question] = answer;
-        var inputType = getCurrQuestionType();
         console.log('select change listener');
         transitionNext();
     });
@@ -128,7 +129,7 @@ function transitionNext() {
         // Handle all other kinds of questions
         $($questions.get(currQuestion)).find('input').each(function(i, inputElem) {
             if (inputElem.getAttribute("type") == "radio" && $(inputElem).is(':checked')
-              || (inputElem.getAttribute("type") == "text" && $(inputElem).val().length > 0)) {
+              || (inputElem.getAttribute("type") == "number" && $(inputElem).val().length > 0)) {
                 canAdvance = true;
             }
         });
@@ -137,7 +138,9 @@ function transitionNext() {
                 complete: function(){
                     currQuestion = getNextQuestion(currQuestion);
                     if (currQuestion < totalQuestions) {
-                        $($questions.get(currQuestion)).fadeIn();
+                        $($questions.get(currQuestion)).fadeIn(function() {
+                            $($questions.get(currQuestion)).focus();
+                        });
                     } else {
                         showResults();
                     }
@@ -152,8 +155,9 @@ function transitionNext() {
 
 // Returns the type of a question ('radio', 'text', or 'select') for a given
 // questionNum
-function getCurrQuestionType() {
-    return $($questions.get(currQuestion)).find('input')[0] ? $($questions.get(currQuestion)).find('input')[0].getAttribute('type') : 'select';
+function getCurrQuestionType(elem) {
+    var nodeName = elem.nodeName.toLowerCase().trim();
+    return nodeName == "input" ? elem.getAttribute('type') : nodeName;
 }
 
 // Calculates all results and displays them on page

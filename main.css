@@ -7,14 +7,40 @@ h3 {
     color: white;
 }
 
-
-input[type="radio"] {
-    height: 20px;
-    width: 20px;
+label {
+    font-size: medium;
 }
 
+
+/*input[type="radio"] {
+    height: 20px;
+    width: 20px;
+}*/
+
+.input-group *{
+    border: 2px solid white;
+    width: 175px;
+}
+input[type="number"],
 input[type="text"] {
-    color: black;
+    width: 175px;
+    background-color: transparent;
+    margin: 0 auto;
+    float: none;
+    border: 2px solid white;
+    color: white;
+    font-family: inherit;
+    font-size: medium;
+}
+
+#select {
+    background-color: transparent;
+    width: 175px;
+    margin: 0 auto;
+    float: none;
+    color: white;
+    font-family: inherit;
+    font-size: medium;
 }
 
 #formRow {
