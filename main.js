@@ -83,8 +83,6 @@ function addAnswerListener() {
         var inputType = getCurrQuestionType(this);
         var answer = ($(this).val());
         var question = inputType == 'radio' ? $(this).parent().parent().attr('id') : $(this).parent().attr('id');
-        console.log(inputType);
-        console.log(question);
         answers[question] = answer;
         if(inputType == 'radio') {
             console.log('radio change listener');
@@ -139,7 +137,11 @@ function transitionNext() {
                     currQuestion = getNextQuestion(currQuestion);
                     if (currQuestion < totalQuestions) {
                         $($questions.get(currQuestion)).fadeIn(function() {
-                            $($questions.get(currQuestion)).focus();
+                            var input = $($questions.get(currQuestion)).find('input');
+                            var type = input.length > 0 ? input[0].getAttribute("type") : "";
+                            if (type == "number" || type == "text") {
+                                input.focus();
+                            }
                         });
                     } else {
                         showResults();

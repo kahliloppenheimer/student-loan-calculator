@@ -188,7 +188,7 @@ getResults = function(answers) {
     for (var i = 0; i < plansAndPayments.length; ++i) {
         var plan = plansAndPayments[i][0];
         var payment = plansAndPayments[i][1];
-        var savings = calc.getCurrentMonthlyPayment() && payment ? calc.getCurrentMonthlyPayment() - payment : '-';
+        var savings = calc.getCurrentMonthlyPayment() - payment;
         // Max period possible for the given plan
         var maxPeriod = plansToMaxPeriods[plan]
         // Period required if the payments were to pay off the entire balance
@@ -300,21 +300,6 @@ var incomeTests = [
 
 runIncomeTests();
 
-var answers = {
-    q1: "No",
-    q2: "Yes",
-    q3: "Yes",
-    q5: "No",
-    q8: "No",
-    q9: "Single",
-    q13: "5",
-    q14: "15000",
-    q15: "300",
-    q16: "15000",
-    q17: "5",
-    q18: "Deferment",
-    q21: "Yes",
-    q22: "Yes"
-}
+var answers = {"q1":"No","q2":"No","q3":"No","q4":"AR","q5":"No","q8":"No","q9":"Single","q13":"5","q14":"15000","q15":"300","q16":"12000","q17":"5","q18":"Current","q20":"300","q21":"Yes","q22":"Yes"}
 
 console.log(getResults(answers));
