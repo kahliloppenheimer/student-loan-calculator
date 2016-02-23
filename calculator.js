@@ -46,28 +46,35 @@ Calculator.prototype.getPovertyLine = function() {
         }
     }
     // default to continental for the case of non-filled state
-    var state = 'continental';
-    if (this.answers['q4']) {
-        var state = this.answers['q4'].toLowerCase().trim();
-    }
+    var state = this.getState();
     if (state != 'ak' && state != 'hi') {
         state = 'continental';
     }
     return povLines[state][this.getFamilySize()];
 }
 
+// Returns state that user selected
+Calculator.prototype.getState = function() {
+    return this.answers['q1'].toLowerCase().trim();
+}
+
+// Returns the date of the oldest loan taken out
+Calculator.prototype.getDate = function() {
+    return this.answers['q6'];
+}
+
 // Returns principle balance of client's current loans
 Calculator.prototype.getPrincipleBalance = function() {
-    return extractNum(this.answers['q16']);
+    return extractNum(this.answers['q17']);
 }
 
 Calculator.prototype.getInterestRate = function() {
-    return extractNum(this.answers['q17']);
+    return extractNum(this.answers['q18']);
 }
 
 // Returns client's current monthly payment on loan
 Calculator.prototype.getCurrentMonthlyPayment = function() {
-    return extractNum(this.answers['q20']);
+    return extractNum(this.answers['q21']);
 }
 
 // Returns client's currents annual payment on loan
@@ -77,17 +84,17 @@ Calculator.prototype.getCurrentAnnualPayment = function() {
 
 // Returns spouse's AGI
 Calculator.prototype.getSpouseIncome = function() {
-    return this.answers['q12'] ? extractNum(this.answers['q12']) : 0;
+    return this.answers['q13'] ? extractNum(this.answers['q13']) : 0;
 }
 
 // Returns family size claimed by client on taxes
 Calculator.prototype.getFamilySize = function() {
-    return extractNum(this.answers['q13']);
+    return extractNum(this.answers['q14']);
 }
 
 // Returns adjusted gross income for client
 Calculator.prototype.getAgi = function() {
-    return extractNum(this.answers['q14']);
+    return extractNum(this.answers['q15']);
 }
 
 // Returns client + spouse total income
@@ -95,14 +102,13 @@ Calculator.prototype.getTotalHouseholdIncome = function() {
     return this.getAgi() + this.getSpouseIncome();
 }
 
-// Returns AGI for calculation
-Calculator.prototype.getAgiForCalculation = function() {
-    return this.getSpouseIncome() <= this.getAgi() * 1.5 ? this.getTotalHouseholdIncome() : this.getAgi();
-}
-
 // Returns difference between Agi and 150% of poverty line index
-Calculator.prototype.getDiscretionaryIncome = function() {
-    return Math.max(0, this.getAgiForCalculation() - 1.5 * this.getPovertyLine());
+Calculator.prototype.getDiscretionaryIncome = function(countSpouse) {
+    if (!countSpouse) {
+        return Math.max(0, this.getAgi() - 1.5 * this.getPovertyLine());
+    } else {
+        return Math.max(0, this.getTotalHouseholdIncome() - 1.5 * this.getPovertyLine());
+    }
 }
 
 // Definition found at:
@@ -127,19 +133,37 @@ function valueOfLoanAfterDuration(p, r, n) {
     return p * r / (1 - (Math.pow(1/(1 + r), n))) * n;
 }
 
+// Returns true iff the oldest current loan was taken out
+// after Oct. 1, 2007
+Calculator.prototype.isNewBorrowerForPaye = function() {
+    var oldest = new Date(2007, 10, 1);
+    return this.getDate() > oldest;
+}
+
+// Returns true iff the oldest current loan was taken out
+// after July 1, 2014
+Calculator.prototype.isNewBorrowerForIbr = function() {
+    var oldest = new Date(2014, 7, 1);
+    return this.getDate() > oldest;
+}
+
 /**
  * All payment calculations are outlined at https://studentaid.ed.gov/sa/repay-loans/understand/plans
  */
 Calculator.prototype.getRepayePayment = function() {
-    return 0.10 * this.getDiscretionaryIncome() / 12;
+    return 0.10 * this.getDiscretionaryIncome(true) / 12;
 }
 
 Calculator.prototype.getPayePayment = function() {
-    return this.hasPartialFinancialHardship() ? 0.10 * this.getDiscretionaryIncome() / 12 : -1;
+    return this.isNewBorrowerForPaye() && this.hasPartialFinancialHardship() ? 0.10 * this.getDiscretionaryIncome() / 12 : -1;
 }
 
 Calculator.prototype.getIbrPayment = function() {
-    return this.hasPartialFinancialHardship() ?  0.15 * this.getDiscretionaryIncome() / 12 : -1;
+    return !this.isNewBorrowerForIbr() && this.hasPartialFinancialHardship() ?  0.15 * this.getDiscretionaryIncome() / 12 : -1;
+}
+
+Calculator.prototype.getIbrForNewBorrowerPayment = function() {
+    return this.isNewBorrowerForIbr() && this.hasPartialFinancialHardship() ? 0.10 * this.getDiscretionaryIncome() / 12 : -1;
 }
 
 // Takes in the principle balance p, the interest rate r, and the monthly payment m
@@ -169,28 +193,24 @@ getResults = function(answers) {
     var calc = new Calculator(answers);
     // Headers of results table
     var results = [['Payment Plan', 'Monthly Payment ($)', 'Monthly Savings ($)', 'Total Amount Paid ($)', 'Projected Loan Forgiveness ($)', 'Repayment Period (months)']];
-    // Payment plan names paired with the monthly payment values
-    var plansAndPayments = [
+    // 3-tuples containing payment plan name, monthly payment, and maximum repayment term
+    var paymentPlans = [
         ['Current', calc.getCurrentMonthlyPayment()],
-        ['Standard', calc.getStandardPayment()],
-        ['REPAYE', calc.getRepayePayment()],
-        ['PAYE', calc.getPayePayment()],
-        ['IBR', calc.getIbrPayment()]
+        ['Standard', calc.getStandardPayment(), 120],
+        ['REPAYE', calc.getRepayePayment(), 300],
+        ['PAYE', calc.getPayePayment(), 240],
+        ['IBR', calc.getIbrPayment(), 300],
+        ['IBR for New Borrowers', calc.getIbrForNewBorrowerPayment(), 240]
     ];
-    // Mapping of payment plan names to max months in repayment period
-    var plansToMaxPeriods = {
-        'Standard': 120,
-        'REPAYE': 300,
-        'PAYE': 240,
-        'IBR': 300
-    };
+
+
     // Go through each plan and monthly payment and add row to results table
-    for (var i = 0; i < plansAndPayments.length; ++i) {
-        var plan = plansAndPayments[i][0];
-        var payment = plansAndPayments[i][1];
+    for (var i = 0; i < paymentPlans.length; ++i) {
+        var plan = paymentPlans[i][0];
+        var payment = paymentPlans[i][1];
+        var maxPeriod = paymentPlans[i][2];
         var savings = calc.getCurrentMonthlyPayment() - payment;
         // Max period possible for the given plan
-        var maxPeriod = plansToMaxPeriods[plan]
         // Period required if the payments were to pay off the entire balance
         var fullPeriod = calc.getPeriodForMonthlyPayment(payment);
         // Take min of the two of the maxPeriod exists
@@ -253,7 +273,7 @@ function extractNum(str) {
 
 // Runs some very basic initial tests to make sure getters/setters work
 function initialTests() {
-    var calc = new Calculator({'q4': 'AK', 'q12': '$30,000', 'q13': '2', 'q14': '45,616.73', 'q16': '$20,000.53', 'q17': '5.00%', 'q20': '$513.001'});
+    var calc = new Calculator({'q1': 'AK', 'q6': new Date(2015, 1, 1), 'q13': '$30,000', 'q14': '2', 'q15': '45,616.73', 'q17': '$20,000.53', 'q18': '5.00%', 'q21': '$513.001'});
     return calc.getPrincipleBalance() == 20000.53 &&
         calc.getCurrentMonthlyPayment() == 513.001 &&
         calc.getCurrentAnnualPayment() == 513.001 * 12 &&
@@ -266,11 +286,12 @@ function initialTests() {
 
 // Runs a single income test
 function runIncomeTest(t) {
-    var calc = new Calculator({'q4': t[4],
-                               'q13': '' + t[3],
-                               'q14': '' + t[2],
-                               'q16': '' + t[0],
-                               'q17': '' + t[1]});
+    var calc = new Calculator({'q1': t[4],
+                               'q6': new Date(2013, 1, 1),
+                               'q14': '' + t[3],
+                               'q15': '' + t[2],
+                               'q17': '' + t[0],
+                               'q18': '' + t[1]});
     return Math.round(calc.getStandardPayment()) == t[5]
         && Math.round(calc.getPayePayment()) == t[7]
         && Math.round(calc.getRepayePayment()) == t[6]
@@ -299,7 +320,3 @@ var incomeTests = [
 ];
 
 runIncomeTests();
-
-var answers = {"q1":"No","q2":"No","q3":"No","q4":"AR","q5":"No","q8":"No","q9":"Single","q13":"5","q14":"15000","q15":"300","q16":"12000","q17":"5","q18":"Current","q20":"300","q21":"Yes","q22":"Yes"}
-
-console.log(getResults(answers));

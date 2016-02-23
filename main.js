@@ -4,74 +4,64 @@ $(document).ready(function(){
     $results = $('#results');
     $prevNext = $('.prevNext');
     totalQuestions = $questions.size();
-    currQuestion = 0;
+    // Represents path through questions so far
+    // i.e. [0, 1, 3] means user has answered questions
+    // 0, 1, and 3 (but skipped 2 based on some previous answer)
+    questionPath = [0];
     $questions.hide();
     $results.hide();
-    $($questions.get(currQuestion)).fadeIn();
+    $($questions.get(getCurrQuestion())).fadeIn();
     addAnswerListener();
     addSelectChangeListener();
     addChangeOnEnter();
     addprevNextListeners();
+    initializeDatePicker();
 });
 
-// Returns the next question based on the current question number
-function getNextQuestion() {
-    // Deal with 1-based index of question numbers
-    var qNum = currQuestion + 1;
-    var nextQ = qNum + 1;
-    // Question skipping logic
-    if (qNum == 5 && answers['q5'].toLowerCase().charAt(0) === 'n') {
-        nextQ = 8;
-    } else if (qNum == 6 && answers['q6'].toLowerCase().charAt(0) === 'y') {
-        nextQ = 8;
-    } else if (qNum == 8 && answers['q8'].toLowerCase().charAt(0) === 'y') {
-        if (answers['q1'].toLowerCase().charAt(0) === 'n') {
-            nextQ = 22;
-        } else {
-            nextQ = 23;
-        }
-    } else if (qNum == 9 && answers['q9'].toLowerCase().charAt(0) === 's') {
-        nextQ = 13;
-    } else if (qNum == 11 && answers['q11'].toLowerCase().charAt(0) === 'n') {
-        nextQ = 13;
-    } else if (qNum == 18 && answers['q18'].toLowerCase().indexOf('current') >= 0) {
-        nextQ = 20;
-    } else if (qNum == 18 && answers['q18'].toLowerCase().indexOf('default') < 0) {
-        nextQ = 21;
-    } else if (qNum == 19) {
-        nextQ = 21;
-    } else if (qNum == 21 && answers['q1'].toLowerCase().charAt(0) === 'y') {
-        nextQ = 23;
-    }
-    return nextQ - 1;
+// Returns the current question (i.e. the most recently added question
+// to the question path)
+function getCurrQuestion() {
+    return questionPath[questionPath.length - 1];
 }
 
-// Returns the previous question based on the current question number
-function getPrevQuestion() {
-    // Deal with 1-based index of question numbers
-    var qNum = currQuestion + 1;
-    var nextQ = qNum - 1;
-    // Question skipping logic
-    if (qNum == 8 && answers['q5'].toLowerCase().charAt(0) === 'n') {
-        nextQ = 5;
-    } else if (qNum == 8 && answers['q6'].toLowerCase().charAt(0) === 'y') {
-        nextQ = 6;
-    } else if (qNum == 22 && answers['q8'].toLowerCase().charAt(0) === 'y') {
-        if (answers['q1'].toLowerCase().charAt(0) === 'n') {
-            nextQ = 8;
+// According to documentation at http://www.eyecon.ro/bootstrap-datepicker/
+function initializeDatePicker() {
+    $('.firstMonth').datepicker();
+    $('.firstMonth').on('changeDate', function(ev) {
+        if (ev.viewMode != "years") {
+            var question = $(this).parent().attr('id');
+            answers[question] = ev.date;
+            $(this).datepicker('hide');
+            transitionNext();
         }
-    } else if (qNum == 13 && answers['q9'].toLowerCase().charAt(0) === 's') {
-        nextQ = 9;
-    } else if (qNum == 13 && answers['q11'].toLowerCase().charAt(0) === 'n') {
-        nextQ = 11;
-    } else if (qNum == 20 && answers['q18'].toLowerCase().indexOf('default') < 0) {
-        nextQ = 18;
-    } else if (qNum == 21 && answers['q18'].toLowerCase().indexOf('default') >= 0) {
-        nextQ = 19;
-    } else if (qNum == 21 && answers['q18'].toLowerCase().indexOf('current') < 0) {
-        nextQ = 18;
-    } else if (qNum == 23 && answers['q1'].toLowerCase().charAt(0) === 'y') {
+    });
+}
+
+// Returns the next question based on the current question number
+// (assuming passed value is 1-indexed)
+function getNextQuestion(qNum) {
+    var nextQ = qNum + 1;
+    // Question skipping logic
+    if (qNum == 7 && answers['q7'] && answers['q7'].toLowerCase().charAt(0) === 'n') {
+        nextQ = 10;
+    } else if (qNum == 8 && answers['q8'] && answers['q8'].toLowerCase().charAt(0) === 'y') {
+        nextQ = 10;
+    } else if (qNum == 10 && answers['q10'] && answers['q10'].toLowerCase().charAt(0) === 'y') {
+        if (answers['q2'].toLowerCase().charAt(0) === 'n') {
+            nextQ = 23;
+        } else {
+            nextQ = 24;
+        }
+    } else if (qNum == 11 && answers['q11'] && answers['q11'].toLowerCase().charAt(0) === 's') {
+        nextQ = 14;
+    } else if (qNum == 19 && answers['q19'] && answers['q19'].toLowerCase().indexOf('current') >= 0) {
         nextQ = 21;
+    } else if (qNum == 19 && answers['q19'] && answers['q19'].toLowerCase().indexOf('default') < 0) {
+        nextQ = 21;
+    } else if (qNum == 20) {
+        nextQ = 22;
+    } else if (qNum == 22 && answers['q2'] && answers['q2'].toLowerCase().charAt(0) === 'y') {
+        nextQ = 24;
     }
     return nextQ - 1;
 }
@@ -123,24 +113,29 @@ function transitionNext() {
         // False unless either a radio button is checked or a text box is filled in
         var canAdvance = false;
         // Handle the question that has a select drop down
-        canAdvance = $($questions.get(currQuestion)).find('select').length == 0  ? false : true;
+        canAdvance = $($questions.get(getCurrQuestion())).find('select').length == 0  ? false : true;
         // Handle all other kinds of questions
-        $($questions.get(currQuestion)).find('input').each(function(i, inputElem) {
-            if (inputElem.getAttribute("type") == "radio" && $(inputElem).is(':checked')
-              || (inputElem.getAttribute("type") == "number" && $(inputElem).val().length > 0)) {
+        $($questions.get(getCurrQuestion())).find('input').each(function(i, inputElem) {
+            var type = inputElem.getAttribute("type");
+            if (type == "radio" && $(inputElem).is(':checked')
+              || ((type == "number" || type == "text") && $(inputElem).val().length > 0)) {
                 canAdvance = true;
             }
         });
         if (canAdvance) {
-            $($questions.get(currQuestion)).fadeOut({
+            $($questions.get(getCurrQuestion())).fadeOut({
                 complete: function(){
-                    currQuestion = getNextQuestion(currQuestion);
-                    if (currQuestion < totalQuestions) {
-                        $($questions.get(currQuestion)).fadeIn(function() {
-                            var input = $($questions.get(currQuestion)).find('input');
+                    questionPath.push(getNextQuestion(getCurrQuestion() + 1));
+                    if (getCurrQuestion() < totalQuestions) {
+                        $($questions.get(getCurrQuestion())).fadeIn(function() {
+                            var input = $($questions.get(getCurrQuestion())).find('input');
                             var type = input.length > 0 ? input[0].getAttribute("type") : "";
+                            // If enter text, focus the field, otherwise focus next button
+                            // so enter goes to next question
                             if (type == "number" || type == "text") {
                                 input.focus();
+                            } else {
+                                $('#next').focus();
                             }
                         });
                     } else {
@@ -148,6 +143,21 @@ function transitionNext() {
                     }
                     transitionLock = true;
                 }
+            });
+        } else {
+            transitionLock = true;
+        }
+    }
+}
+
+// Transitions to the previous question
+function transitionPrev() {
+    if (transitionLock) {
+        transitionLock = false;
+        if (getCurrQuestion() > 0) {
+            $($questions.get(questionPath.pop())).fadeOut(function(){
+                $($questions.get(getCurrQuestion())).fadeIn();
+                transitionLock = true;
             });
         } else {
             transitionLock = true;
@@ -180,6 +190,14 @@ function makeTable(id, data) {
     if (results.length <= 0) {
         return;
     }
+    var plansToDescs = {
+        'Current': 'Your current monthly payment amount you entered',
+        'Standard': 'The standard 10-year payment plan',
+        'REPAYE': 'Revised Pay As You Earn payment plan',
+        'PAYE': 'Pay As You Earn payment plan for new borrowers as of October 1, 2011',
+        'IBR': 'Income Based Repayment payment plan',
+        'IBR for New Borrowers': 'Income Based Repayment payment plan for new borrowers as of July 1, 2014'
+    };
     // Fill in header row
     var nextRow = '<tr>';
     for (var i = 0; i < data[0].length; ++i) {
@@ -190,12 +208,16 @@ function makeTable(id, data) {
     // Fill in rest of table
     for (var i = 1; i < data.length; ++i) {
         nextRow = '<tr>';
-        for (var j = 0; j < data[i].length; ++j) {
+        var plan = data[i][0];
+        var desc = plansToDescs[plan.split('(ineligable)')[0].trim()];
+        nextRow += '<td><a class="red-tooltip" data-placement="bottom" data-toggle="tooltip" title="" data-original-title="' + desc + '">' + plan + '</a></td>'
+        for (var j = 1; j < data[i].length; ++j) {
             nextRow += '<td>' + data[i][j] + '</td>';
         }
         nextRow += '</tr>';
         $('#resultsTable > tbody:last-child').append(nextRow);
     }
+    $('[data-toggle="tooltip"]').tooltip();
 }
 
 // Adds listeners for the next/prev buttons
@@ -212,18 +234,7 @@ function addprevNextListeners() {
     // Make sure previous only works if they are not on the first question
     $('#prev').click(function(){
         console.log('prev listener');
-        if (transitionLock) {
-            transitionLock = false;
-            if (currQuestion > 0) {
-                $($questions.get(currQuestion)).fadeOut(function(){
-                    currQuestion = getPrevQuestion(currQuestion);
-                    $($questions.get(currQuestion)).fadeIn();
-                    transitionLock = true;
-                });
-            } else {
-                transitionLock = true;
-            }
-        }
+        transitionPrev();
         return false;
     });
 }
