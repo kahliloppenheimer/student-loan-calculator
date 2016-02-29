@@ -112,8 +112,15 @@ function transitionNext() {
         transitionLock = false;
         // False unless either a radio button is checked or a text box is filled in
         var canAdvance = false;
-        // Handle the question that has a select drop down
-        canAdvance = $($questions.get(getCurrQuestion())).find('select').length == 0  ? false : true;
+        // Handle the question that has a select drop down. Only allow advance
+        // if they have changed from default "--"
+        if ($($questions.get(getCurrQuestion())).find('select').length > 0) {
+            var selected = $($questions.get(getCurrQuestion())).find('select').find(':selected').text();
+            if (selected != "--") {
+                canAdvance = true;
+            }
+        }
+
         // Handle all other kinds of questions
         $($questions.get(getCurrQuestion())).find('input').each(function(i, inputElem) {
             var type = inputElem.getAttribute("type");
@@ -196,7 +203,8 @@ function makeTable(id, data) {
         'REPAYE': 'Revised Pay As You Earn payment plan',
         'PAYE': 'Pay As You Earn payment plan for new borrowers as of October 1, 2011',
         'IBR': 'Income Based Repayment payment plan',
-        'IBR for New Borrowers': 'Income Based Repayment payment plan for new borrowers as of July 1, 2014'
+        'IBR for New Borrowers': 'Income Based Repayment payment plan for new borrowers as of July 1, 2014',
+        'ICR': 'Income Contingent Repayment'
     };
     // Fill in header row
     var nextRow = '<tr>';

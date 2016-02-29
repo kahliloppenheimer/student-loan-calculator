@@ -1,6 +1,13 @@
 // Constructs a new calculator for a client based on an answers object
 // produced from web-client
 
+// Calculated as average from 1985-2015, adjusted for inflation
+// http://www.moneychimp.com/features/market_cagr.htm
+AVERAGE_SANDP_RETURN = 0.0964;
+// Average annual US inflation rate between 1913-2013
+// http://inflationdata.com/Inflation/Inflation_Rate/Long_Term_Inflation.asp
+AVERAGE_US_INFLATION = 0.0322;
+
 /** ASSUMPTIONS
  * 1) All loans are undergraduate student loans
  * 2) All loans were taken out before 2014
@@ -13,6 +20,40 @@
 var Calculator = function(answers) {
     this.answers = answers;
 }
+
+// Income percentage factors from 2015 taken from:
+// https://www.federalregister.gov/articles/2015/03/25/2015-06704/annual-updates-to-the-income-contingent-repayment-icr-plan-formula-for-2015-william-d-ford-federal#h-8
+incomePercentageFactors = {
+    'single': {
+        11150: 0.55,
+        15342: 0.5779,
+        19471: 0.6057,
+        24240: 0.6623,
+        28537: 0.7189,
+        33954: 0.8033,
+        42648: 0.8877,
+        53488: 1,
+        77318: 1.118,
+        99003: 1.235,
+        140221: 1.412,
+        160776: 1.5,
+        286370: 2
+    }, 'married': {
+        11150: 0.5052,
+        17593: 0.5668,
+        20965: 0.5956,
+        27408: 0.6779,
+        33954: 0.7522,
+        42648: 0.8761,
+        53487: 1,
+        64331: 1,
+        80596: 1.094,
+        107695: 1.25,
+        145638: 1.406,
+        203682: 1.5,
+        332833: 2
+    }
+};
 
 // Returns poverty line of client based on residence and family size
 Calculator.prototype.getPovertyLine = function() {
@@ -53,6 +94,10 @@ Calculator.prototype.getPovertyLine = function() {
     return povLines[state][this.getFamilySize()];
 }
 
+Calculator.prototype.getIncomePercentageFactor = function() {
+    var agi = get
+}
+
 // Returns state that user selected
 Calculator.prototype.getState = function() {
     return this.answers['q1'].toLowerCase().trim();
@@ -60,7 +105,7 @@ Calculator.prototype.getState = function() {
 
 // Returns the date of the oldest loan taken out
 Calculator.prototype.getDate = function() {
-    return this.answers['q6'];
+    return new Date(this.answers['q6']);
 }
 
 // Returns principle balance of client's current loans
@@ -92,9 +137,29 @@ Calculator.prototype.getFamilySize = function() {
     return extractNum(this.answers['q14']);
 }
 
+// Returns true iff the user indicated they are filing taxes jointly
+Calculator.prototype.isFilingJointly = function() {
+    return this.answers['q12'] && this.answers['q12'].toLowerCase().trim().indexOf('jointly') >= 0;
+}
+
+// Returns true iff the user indicated the user is filing taxes as single
+Calculator.prototype.isFilingSingle = function() {
+    return this.answers['q12'] && this.answers['q12'].toLowerCase().trim().indexOf('single') >= 0;
+}
+
 // Returns adjusted gross income for client
 Calculator.prototype.getAgi = function() {
     return extractNum(this.answers['q15']);
+}
+
+// Returns combined spouse's income if filing jointly, otherwise just user's agi
+Calculator.prototype.getAgiForCalculation = function() {
+    return this.isFilingJointly() ? this.getTotalHouseholdIncome() : this.getAgi();
+}
+
+// Returns true iff the user answered yes to having graduate loans
+Calculator.prototype.hasGraduateLoans = function() {
+    return this.answers['q5'].toLowerCase().trim().charAt(0) == 'y';
 }
 
 // Returns client + spouse total income
@@ -105,10 +170,15 @@ Calculator.prototype.getTotalHouseholdIncome = function() {
 // Returns difference between Agi and 150% of poverty line index
 Calculator.prototype.getDiscretionaryIncome = function(countSpouse) {
     if (!countSpouse) {
-        return Math.max(0, this.getAgi() - 1.5 * this.getPovertyLine());
+        return Math.max(0, this.getAgiForCalculation() - 1.5 * this.getPovertyLine());
     } else {
         return Math.max(0, this.getTotalHouseholdIncome() - 1.5 * this.getPovertyLine());
     }
+}
+
+// Returns difference between agi and 100% of poverty line index
+Calculator.prototype.getDiscretionaryIncomeForIcr = function() {
+    return Math.max(0, this.getAgiForCalculation() - this.getPovertyLine());
 }
 
 // Definition found at:
@@ -154,6 +224,11 @@ Calculator.prototype.getRepayePayment = function() {
     return 0.10 * this.getDiscretionaryIncome(true) / 12;
 }
 
+// 25 years if the student has any graduate loans, otherwise 20 years
+Calculator.prototype.getRepayePeriod = function() {
+    return this.hasGraduateLoans() ? 25 * 12 : 20 * 12;
+}
+
 Calculator.prototype.getPayePayment = function() {
     return this.isNewBorrowerForPaye() && this.hasPartialFinancialHardship() ? 0.10 * this.getDiscretionaryIncome() / 12 : -1;
 }
@@ -166,12 +241,43 @@ Calculator.prototype.getIbrForNewBorrowerPayment = function() {
     return this.isNewBorrowerForIbr() && this.hasPartialFinancialHardship() ? 0.10 * this.getDiscretionaryIncome() / 12 : -1;
 }
 
+Calculator.prototype.getIcrPayment = function() {
+    // income percentage factor
+    var ipf = 0.55;
+    var agi = this.getAgiForCalculation();
+    var opt1 = 0.20 * this.getDiscretionaryIncomeForIcr() / 12;
+    // Income value percentages for tax-filing status
+    var ipfs = incomePercentageFactors[this.isFilingSingle() ? 'single' : 'married'];
+    // Income value percentage of user based on agi
+    var ipf = Object.keys(ipfs)[0];
+    for (var income in ipfs) {
+        // if ()
+    }
+    var opt2 = ipf * valueOfLoanAfterDuration(this.getPrincipleBalance(), this.getInterestRate(), 12 * 12) / (12 * 12);
+    return Math.min(opt1, opt2);
+}
+
+// Investment estimate equations pulled from:
+// https://home.ubalt.edu/ntsbarsh/business-stat/otherapplets/CompoundCal.htm
+// Returns the future value (FV) of an investment of present value (PV) dollars
+// earning interest at an annual rate of r compounded m times per year for a
+// period of t years with payments p added m times per year. r is converted into
+// a real interest rate by taking US inflation into consideration as in:
+// http://www.investopedia.com/terms/n/nominalinterestrate.asp
+function getFvIncreasingAnnuity(pv, p, r, m, t) {
+    // r = r - AVERAGE_US_INFLATION;
+    r = (1 + r) / (1 + AVERAGE_US_INFLATION) - 1;
+    var i = r / m;
+    var n = m * t;
+    return pv * Math.pow(1 + i, n) + p * (Math.pow(1 + i, n) - 1) / i;
+}
+
 // Takes in the principle balance p, the interest rate r, and the monthly payment m
 // and returns the number of months required to pay off the loan. Notably, this will
 // give an upper-bound estimate (i.e. the ceiling) of the true value of the number
 // of months. Taken from:
 // http://www.had2know.com/finance/how-long-pay-off-loan.html
-function getPeriod(p, r, m) {
+function getPeriodOld(p, r, m) {
     // Convert percentages to decimal
     if (r > 1) {
         r /= 100;
@@ -183,26 +289,81 @@ function getPeriod(p, r, m) {
     return Math.ceil((Math.log(m) - Math.log(m - p * r / 12)) / Math.log(1 + r / 12));
 }
 
-// Gets period for loan assuming this calculator's principle balance and interest
-Calculator.prototype.getPeriodForMonthlyPayment = function(p) {
-    return getPeriod(this.getPrincipleBalance(), this.getInterestRate(), p);
+// Gets payment period and amount paid for loan with principle p, interest rate r, and monthly payment m,
+// assuming that the first 36 months of interest are forgiven. Return object is of form
+// {length: num_terms, amount: total_paid}
+// example options are:
+// { months_interest_forgiven: 0, interest_pct_forgiven=0, capitalizing_interest=false}
+function getPeriodAndAmtPaid(p, r, m, options) {
+    options = options ? options : {};
+    var capitalizingInterest = options['capitalizing_interest'] ? options['capitalizing_interest'] : true;
+    var monthsInterestForgiven = options['months_interest_forgiven'] ? options['months_interest_forgiven'] : 0;
+    var interestPctForgiven = options['interest_pct_forgiven'] ? options['interest_pct_forgiven'] : 0;
+    // Convert percentages to decimal
+    if (interestPctForgiven > 1) {
+        interestPctForgiven /= 100;
+    }
+    if (r > 1) {
+        r /= 100;
+    }
+    // Return infinity for non-positive monthly payments
+    if (m <= 0) {
+        return {length: Number.MAX_VALUE, amount: 0};
+    }
+    var monthlyRate = r / 12;
+    var currTerm = 0;
+    var amtPaid = 0;
+    var interest = 0;
+    // Cutoff once loan has been paid off or maxYears years has passed
+    var maxYears = 1000;
+    while (p > 0.001 && currTerm < 12 * maxYears) {
+        interest += capitalizingInterest ? monthlyRate * (p + interest) : monthlyRate * p;
+        var payment = Math.min(interest + p, m);
+        var amtToInterest = Math.min(payment, interest);
+        amtPaid += payment;
+        interest -= amtToInterest;
+        payment -= amtToInterest;
+        p -= payment;
+        ++currTerm;
+    }
+    // Deal with the case where maxYears years has passed
+    currTerm = currTerm < 12 * maxYears ? currTerm : NaN;
+    return {length: currTerm, amount: amtPaid};
+}
+
+// Gets period and total amount paid for loan assuming this
+// calculator's principle balance and interest.
+// i.e. {length: 360, amount: 16250.25}
+Calculator.prototype.getPeriodAndAmtPaidForPayment = function(p) {
+    // return getPeriodOld(this.getPrincipleBalance(), this.getInterestRate(), p);
+    console.log(getPeriodOld(this.getPrincipleBalance(), this.getInterestRate(), p));
+    console.log(getPeriodAndAmtPaid(this.getPrincipleBalance(), this.getInterestRate(), p)['length']);
+    return getPeriodAndAmtPaid(this.getPrincipleBalance(), this.getInterestRate(), p);
 }
 
 // Returns a table of results to display given a user's answers
 getResults = function(answers) {
     var calc = new Calculator(answers);
     // Headers of results table
-    var results = [['Payment Plan', 'Monthly Payment ($)', 'Monthly Savings ($)', 'Total Amount Paid ($)', 'Projected Loan Forgiveness ($)', 'Repayment Period (months)']];
+    var results = [
+        ['Payment Plan',
+        'Monthly Payment ($)',
+        'Monthly Savings ($)',
+        'Total Amount Paid ($)',
+        'Projected Loan Forgiveness ($)',
+        'Amount Earned if Savings Invested ($)',
+        'Repayment Period (months)']
+    ];
     // 3-tuples containing payment plan name, monthly payment, and maximum repayment term
     var paymentPlans = [
         ['Current', calc.getCurrentMonthlyPayment()],
         ['Standard', calc.getStandardPayment(), 120],
-        ['REPAYE', calc.getRepayePayment(), 300],
+        ['REPAYE', calc.getRepayePayment(), calc.getRepayePeriod()],
         ['PAYE', calc.getPayePayment(), 240],
         ['IBR', calc.getIbrPayment(), 300],
-        ['IBR for New Borrowers', calc.getIbrForNewBorrowerPayment(), 240]
+        ['IBR for New Borrowers', calc.getIbrForNewBorrowerPayment(), 240],
+        ['ICR', calc.getIcrPayment(), 300]
     ];
-
 
     // Go through each plan and monthly payment and add row to results table
     for (var i = 0; i < paymentPlans.length; ++i) {
@@ -212,11 +373,15 @@ getResults = function(answers) {
         var savings = calc.getCurrentMonthlyPayment() - payment;
         // Max period possible for the given plan
         // Period required if the payments were to pay off the entire balance
-        var fullPeriod = calc.getPeriodForMonthlyPayment(payment);
+        var periodAndPaid = calc.getPeriodAndAmtPaidForPayment(payment);
+        var fullPeriod = periodAndPaid['length'];
+        var amtPaid = periodAndPaid['amount'];
         // Take min of the two of the maxPeriod exists
         var period = maxPeriod ? Math.min(maxPeriod, fullPeriod) : fullPeriod;
         // Projected forigveness is full amount that would be paid minus the amount that is paid
         var forgiveness = valueOfLoanAfterDuration(calc.getPrincipleBalance(), calc.getInterestRate(), period) - payment * period;
+        // Projected earings if savings are Invested
+        var fv = getFvIncreasingAnnuity(0, savings, AVERAGE_SANDP_RETURN, 12, period / 12);
         // Functions to format negative values for forgiveness dollar amounts and
         // all other dollar amounts
         var fun = function(b){return '(' + b + ')';};
@@ -227,8 +392,9 @@ getResults = function(answers) {
                 plan,
                 fmtAsMoney(payment, fun),
                 fmtAsMoney(savings, fun),
-                fmtAsMoney(payment * period, fun),
+                fmtAsMoney(amtPaid, fun),
                 fmtAsMoney(forgiveness, forgivenessFun),
+                fmtAsMoney(fv, fun),
                 period
             ];
         } else {
@@ -310,6 +476,29 @@ function runIncomeTests(tests) {
     console.log(failed ? "Some income tests failed..." : "Income tests passed!");
 }
 
+// Tests calculation of repayment periods for loans
+function runPeriodTests() {
+    for (var i = 0; i < 500; ++i) {
+        var p = randFloat(3000, 70000);
+        var r = randFloat(2, 9);
+        var m = randFloat(25, 550);
+        var t1 = getPeriodOld(p, r, m);
+        var t2 = getPeriodAndAmtPaid(p, r, m)['length'];
+        if (t1 != t2 && !(Number.isNaN(t1) && Number.isNaN(t2))) {
+            console.log('Period test ' + i + ' failed!\tt1 = ' + t1 + ' t2 = ' + t2 + '\t(p = ' + p + ' r = ' + r + ' m = ' + m + ')');
+            return;
+        }
+    }
+    console.log('Period tests passed!');
+}
+
+/**
+ * Returns a random number between min (inclusive) and max (exclusive)
+ */
+function randFloat(min, max) {
+    return Math.random() * (max - min) + min + Math.random();
+}
+
 console.log(initialTests() ? "Initial tests passed!" : "Initial tests failed!");
 var incomeTests = [
     [45000, 5, 35000, 1, 'Connecticut', 477, 145, 145, 217],
@@ -320,3 +509,7 @@ var incomeTests = [
 ];
 
 runIncomeTests();
+runPeriodTests();
+
+// var answers = {"q1":"AZ","q2":"Yes","q3":"Yes","q4":"Yes","q5":"No","q6":"2010-02-01T05:00:00.000Z","q7":"No","q10":"No","q11":"Single","q14":"3","q15":"15000","q16":"300","q17":"12000","q18":"5","q19":"Current","q21":"300","q22":"Yes"}
+// console.log(getResults(answers));
