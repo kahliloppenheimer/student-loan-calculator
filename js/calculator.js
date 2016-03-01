@@ -249,9 +249,11 @@ Calculator.prototype.getIcrPayment = function() {
     // Income value percentages for tax-filing status
     var ipfs = incomePercentageFactors[this.isFilingSingle() ? 'single' : 'married'];
     // Income value percentage of user based on agi
-    var ipf = Object.keys(ipfs)[0];
-    for (var income in ipfs) {
-        // if ()
+    var i = 0;
+    var ipf = ipfs[Object.keys(ipfs)[i]];
+    while (Object.keys(ipfs)[i] < agi) {
+        i++;
+        ipf = ipfs[Object.keys(ipfs)[i]];
     }
     var opt2 = ipf * valueOfLoanAfterDuration(this.getPrincipleBalance(), this.getInterestRate(), 12 * 12) / (12 * 12);
     return Math.min(opt1, opt2);
@@ -289,60 +291,64 @@ function getPeriodOld(p, r, m) {
     return Math.ceil((Math.log(m) - Math.log(m - p * r / 12)) / Math.log(1 + r / 12));
 }
 
-// Gets payment period and amount paid for loan with principle p, interest rate r, and monthly payment m,
-// assuming that the first 36 months of interest are forgiven. Return object is of form
-// {length: num_terms, amount: total_paid}
-// example options are:
-// { months_interest_forgiven: 0, interest_pct_forgiven=0, capitalizing_interest=false}
-function getPeriodAndAmtPaid(p, r, m, options) {
+// Gets payment period, amount paid, and remaining balance for loan with
+// principle p, interest rate r, and monthly payment m with possible options:
+// {capitalize: true, numMonthsForgiven: 36, pctForgiven: 100}
+// Return object is of form
+// {length: 120, amountPaid: 15350.25, remainingBalance: 250.17, forgivenInterest: 20.03}
+getFinalLoanState = function(p, r, m, maxPeriod, options) {
     options = options ? options : {};
-    var capitalizingInterest = options['capitalizing_interest'] ? options['capitalizing_interest'] : true;
-    var monthsInterestForgiven = options['months_interest_forgiven'] ? options['months_interest_forgiven'] : 0;
-    var interestPctForgiven = options['interest_pct_forgiven'] ? options['interest_pct_forgiven'] : 0;
+    var capitalize = options['capitalize'] ? options['capitalize'] : true;
+    var numMonthsForgiven = options['numMonthsForgiven'] ? options['numMonthsForgiven'] : 0;
+    var pctForgiven = options['pctForgiven'] ? options['pctForgiven'] : 0;
     // Convert percentages to decimal
-    if (interestPctForgiven > 1) {
-        interestPctForgiven /= 100;
+    if (pctForgiven > 1) {
+        pctForgiven /= 100;
     }
     if (r > 1) {
         r /= 100;
     }
     // Return infinity for non-positive monthly payments
     if (m <= 0) {
-        return {length: Number.MAX_VALUE, amount: 0};
+        m = 0;
     }
     var monthlyRate = r / 12;
     var currTerm = 0;
     var amtPaid = 0;
+    var totalForgivenInterest = 0;
     var interest = 0;
-    // Cutoff once loan has been paid off or maxYears years has passed
-    var maxYears = 1000;
-    while (p > 0.001 && currTerm < 12 * maxYears) {
-        interest += capitalizingInterest ? monthlyRate * (p + interest) : monthlyRate * p;
-        var payment = Math.min(interest + p, m);
-        var amtToInterest = Math.min(payment, interest);
+    // amount the user should pay this month (i.e. either m or the remaining amount if small enough)
+    var payment;
+    // Interest of current payment
+    var currInterest;
+    // amount of the payment that should go to paying off interest
+    var amtToInterest;
+    while (p > 0.001 && currTerm < maxPeriod) {
+        // Calculate how much interest for this month
+        currInterest = capitalize ? monthlyRate * (p + interest) : monthlyRate * p;
+        // Calculate whether payment should be m or whatever is left
+        payment = Math.min(interest + currInterest + p, m);
+        // Determine how much of the payment goes towards interest
+        amtToInterest = Math.min(payment, currInterest);
         amtPaid += payment;
-        interest -= amtToInterest;
         payment -= amtToInterest;
+        // Check for case where there is interest forgiveness
+        if (currTerm < numMonthsForgiven) {
+            var fullInterest = currInterest - amtToInterest;
+            var forgivenInterest = pctForgiven * fullInterest;
+            interest = interest + fullInterest - forgivenInterest;
+            totalForgivenInterest += forgivenInterest;
+        } else {
+            interest = interest + currInterest - amtToInterest;
+        }
         p -= payment;
         ++currTerm;
     }
-    // Deal with the case where maxYears years has passed
-    currTerm = currTerm < 12 * maxYears ? currTerm : NaN;
-    return {length: currTerm, amount: amtPaid};
-}
-
-// Gets period and total amount paid for loan assuming this
-// calculator's principle balance and interest.
-// i.e. {length: 360, amount: 16250.25}
-Calculator.prototype.getPeriodAndAmtPaidForPayment = function(p) {
-    // return getPeriodOld(this.getPrincipleBalance(), this.getInterestRate(), p);
-    console.log(getPeriodOld(this.getPrincipleBalance(), this.getInterestRate(), p));
-    console.log(getPeriodAndAmtPaid(this.getPrincipleBalance(), this.getInterestRate(), p)['length']);
-    return getPeriodAndAmtPaid(this.getPrincipleBalance(), this.getInterestRate(), p);
+    return {length: currTerm, amountPaid: amtPaid, remainingBalance: p + interest, forgivenInterest: totalForgivenInterest};
 }
 
 // Returns a table of results to display given a user's answers
-getResults = function(answers) {
+function getResults(answers) {
     var calc = new Calculator(answers);
     // Headers of results table
     var results = [
@@ -351,18 +357,19 @@ getResults = function(answers) {
         'Monthly Savings ($)',
         'Total Amount Paid ($)',
         'Projected Loan Forgiveness ($)',
+        'Projected Loan Interest Forgiven ($)',
         'Amount Earned if Savings Invested ($)',
         'Repayment Period (months)']
     ];
     // 3-tuples containing payment plan name, monthly payment, and maximum repayment term
     var paymentPlans = [
-        ['Current', calc.getCurrentMonthlyPayment()],
-        ['Standard', calc.getStandardPayment(), 120],
-        ['REPAYE', calc.getRepayePayment(), calc.getRepayePeriod()],
-        ['PAYE', calc.getPayePayment(), 240],
-        ['IBR', calc.getIbrPayment(), 300],
-        ['IBR for New Borrowers', calc.getIbrForNewBorrowerPayment(), 240],
-        ['ICR', calc.getIcrPayment(), 300]
+        ['Current', calc.getCurrentMonthlyPayment(), Number.MAX_VALUE],
+        ['Standard', calc.getStandardPayment(), 120, ],
+        ['REPAYE', calc.getRepayePayment(), calc.getRepayePeriod(), {capitalize: false, numMonthsForgiven: 0, pctForgiven: 0}],
+        ['PAYE', calc.getPayePayment(), 240, {capitalize: false, numMonthsForgiven: 36, pctForgiven: 100}],
+        ['IBR', calc.getIbrPayment(), 300, {capitalize: false, numMonthsForgiven: 36, pctForgiven: 100}],
+        ['IBR for New Borrowers', calc.getIbrForNewBorrowerPayment(), 240, {capitalize: false, numMonthsForgiven: 36, pctForgiven: 100}],
+        ['ICR', calc.getIcrPayment(), 300, {capitalize: true, numMonthsForgiven: 0, pctForgiven: 0}]
     ];
 
     // Go through each plan and monthly payment and add row to results table
@@ -370,16 +377,18 @@ getResults = function(answers) {
         var plan = paymentPlans[i][0];
         var payment = paymentPlans[i][1];
         var maxPeriod = paymentPlans[i][2];
+        var options = paymentPlans[i][3];
         var savings = calc.getCurrentMonthlyPayment() - payment;
         // Max period possible for the given plan
         // Period required if the payments were to pay off the entire balance
-        var periodAndPaid = calc.getPeriodAndAmtPaidForPayment(payment);
-        var fullPeriod = periodAndPaid['length'];
-        var amtPaid = periodAndPaid['amount'];
+        var finalLoanState = getFinalLoanState(calc.getPrincipleBalance(), calc.getInterestRate(), payment, maxPeriod, options);
+        var fullPeriod = finalLoanState['length'];
+        var amtPaid = finalLoanState['amountPaid'];
+        var forgiveness = finalLoanState['remainingBalance'];
+        var forgivenInterest = finalLoanState['forgivenInterest'];
         // Take min of the two of the maxPeriod exists
         var period = maxPeriod ? Math.min(maxPeriod, fullPeriod) : fullPeriod;
         // Projected forigveness is full amount that would be paid minus the amount that is paid
-        var forgiveness = valueOfLoanAfterDuration(calc.getPrincipleBalance(), calc.getInterestRate(), period) - payment * period;
         // Projected earings if savings are Invested
         var fv = getFvIncreasingAnnuity(0, savings, AVERAGE_SANDP_RETURN, 12, period / 12);
         // Functions to format negative values for forgiveness dollar amounts and
@@ -394,6 +403,7 @@ getResults = function(answers) {
                 fmtAsMoney(savings, fun),
                 fmtAsMoney(amtPaid, fun),
                 fmtAsMoney(forgiveness, forgivenessFun),
+                fmtAsMoney(forgivenInterest, forgivenessFun),
                 fmtAsMoney(fv, fun),
                 period
             ];
@@ -483,8 +493,8 @@ function runPeriodTests() {
         var r = randFloat(2, 9);
         var m = randFloat(25, 550);
         var t1 = getPeriodOld(p, r, m);
-        var t2 = getPeriodAndAmtPaid(p, r, m)['length'];
-        if (t1 != t2 && !(Number.isNaN(t1) && Number.isNaN(t2))) {
+        var t2 = getFinalLoanState(p, r, m, 12 * 1000)['length'];
+        if (t1 != t2 && !(Number.isNaN(t1) && t2 == 12 * 1000)) {
             console.log('Period test ' + i + ' failed!\tt1 = ' + t1 + ' t2 = ' + t2 + '\t(p = ' + p + ' r = ' + r + ' m = ' + m + ')');
             return;
         }
@@ -511,5 +521,5 @@ var incomeTests = [
 runIncomeTests();
 runPeriodTests();
 
-// var answers = {"q1":"AZ","q2":"Yes","q3":"Yes","q4":"Yes","q5":"No","q6":"2010-02-01T05:00:00.000Z","q7":"No","q10":"No","q11":"Single","q14":"3","q15":"15000","q16":"300","q17":"12000","q18":"5","q19":"Current","q21":"300","q22":"Yes"}
-// console.log(getResults(answers));
+var answers = {"q1":"AZ","q2":"Yes","q3":"Yes","q4":"Yes","q5":"No","q6":"2010-02-01T05:00:00.000Z","q7":"No","q10":"No","q11":"Single","q14":"3","q15":"15000","q16":"300","q17":"12000","q18":"5","q19":"Current","q21":"300","q22":"Yes"}
+console.log(getResults(answers));
