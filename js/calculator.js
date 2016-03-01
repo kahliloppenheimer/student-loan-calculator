@@ -528,5 +528,5 @@ var incomeTests = [
 runIncomeTests();
 runPeriodTests();
 
-var answers = {"q1":"AZ","q2":"Yes","q3":"Yes","q4":"Yes","q5":"No","q6":"2010-02-01T05:00:00.000Z","q7":"No","q10":"No","q11":"Single","q14":"3","q15":"15000","q16":"300","q17":"12000","q18":"5","q19":"Current","q21":"300","q22":"Yes"}
-console.log(getResults(answers));
+// var answers = {"q1":"AZ","q2":"Yes","q3":"Yes","q4":"Yes","q5":"No","q6":"2010-02-01T05:00:00.000Z","q7":"No","q10":"No","q11":"Single","q14":"3","q15":"15000","q16":"300","q17":"12000","q18":"5","q19":"Current","q21":"300","q22":"Yes"}
+// console.log(getResults(answers));
