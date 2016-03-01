@@ -1,5 +1,5 @@
 $(document).ready(function(){
-    answers = {'q14': 1};
+    answers = {'q14': '1'};
     $questions = $('.form-group');
     $results = $('#results');
     $prevNext = $('.prevNext');
