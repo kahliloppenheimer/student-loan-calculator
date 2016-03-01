@@ -196,6 +196,10 @@ Calculator.prototype.getStandardPayment = function() {
     return valueOfLoanAfterDuration(this.getPrincipleBalance(), this.getInterestRate(), 120) / 120;
 }
 
+Calculator.prototype.getExtendedPayment = function() {
+    return this.getPrincipleBalance() >= 30000 ? valueOfLoanAfterDuration(this.getPrincipleBalance(), this.getInterestRate(), 12 * 25) / (12 * 25) : -1;
+}
+
 // Computes the value a loan will with principle p and interest rate r will
 // appreciate to after n months
 function valueOfLoanAfterDuration(p, r, n) {
@@ -364,8 +368,9 @@ function getResults(answers) {
     // 3-tuples containing payment plan name, monthly payment, and maximum repayment term
     var paymentPlans = [
         ['Current', calc.getCurrentMonthlyPayment(), Number.MAX_VALUE],
-        ['Standard', calc.getStandardPayment(), 120, ],
-        ['REPAYE', calc.getRepayePayment(), calc.getRepayePeriod(), {capitalize: false, numMonthsForgiven: 0, pctForgiven: 0}],
+        ['Standard', calc.getStandardPayment(), 12 * 10],
+        ['Extended', calc.getExtendedPayment(), 12 * 25],
+        ['REPAYE', calc.getRepayePayment(), calc.getRepayePeriod(), {capitalize: false, numMonthsForgiven: calc.getRepayePeriod(), pctForgiven: 50}],
         ['PAYE', calc.getPayePayment(), 240, {capitalize: false, numMonthsForgiven: 36, pctForgiven: 100}],
         ['IBR', calc.getIbrPayment(), 300, {capitalize: false, numMonthsForgiven: 36, pctForgiven: 100}],
         ['IBR for New Borrowers', calc.getIbrForNewBorrowerPayment(), 240, {capitalize: false, numMonthsForgiven: 36, pctForgiven: 100}],
@@ -404,12 +409,14 @@ function getResults(answers) {
                 fmtAsMoney(amtPaid, fun),
                 fmtAsMoney(forgiveness, forgivenessFun),
                 fmtAsMoney(forgivenInterest, forgivenessFun),
-                fmtAsMoney(fv, fun),
+                fmtAsMoney(fv, forgivenessFun),
                 period
             ];
         } else {
             nextPlan = [
                 plan + ' (ineligable)',
+                '-',
+                '-',
                 '-',
                 '-',
                 '-',

@@ -197,9 +197,20 @@ function makeTable(id, data) {
     if (results.length <= 0) {
         return;
     }
+    var headerDescs = [
+        'A potential payment plan',
+        'How much you would pay per month for this given plan',
+        'How much you would save per month on this given plan, compared to what you currently pay',
+        'How much you would have paid in total by the end of the repayment term on this given plan',
+        'How much of your loan balance will be forgiven by the government at the end of your repayment term. Notably, this amount counts as taxable income on federal taxes',
+        'How much accumulating interest from your loan was forgiven by the federal government',
+        'How much you would earn over the repayment period if you took the amount you saved per month and invested it into an S&P mutual fund. This value is adjusted for inflation, meaning that the number is the value of your gains in today\'s dollars',
+        'The number of months it will take to pay off the loan on the given payment plan'
+    ];
     var plansToDescs = {
         'Current': 'Your current monthly payment amount you entered',
         'Standard': 'The standard 10-year payment plan',
+        'Extended': 'The extended 25-year payment plan',
         'REPAYE': 'Revised Pay As You Earn payment plan',
         'PAYE': 'Pay As You Earn payment plan for new borrowers as of October 1, 2011',
         'IBR': 'Income Based Repayment payment plan',
@@ -209,7 +220,9 @@ function makeTable(id, data) {
     // Fill in header row
     var nextRow = '<tr>';
     for (var i = 0; i < data[0].length; ++i) {
-        nextRow += '<th>' + data[0][i] + '</th>';
+        var content = data[0][i];
+        var desc = headerDescs[i];
+        nextRow += '<th><a class="red-tooltip" data-placement="top" data-toggle="tooltip" title="" data-original-title="' + desc + '">' + content + '</a></th>'
     }
     nextRow += '</tr>';
     $('#resultsTable > thead').append(nextRow);
